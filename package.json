@@ -1,1 +1,38 @@
-{"name":"gpx-pixel-adventure","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"tsc -b && vite build","test":"vitest run"},"dependencies":{"@radix-ui/react-slot":"^1.2.3","class-variance-authority":"^0.7.1","clsx":"^2.1.1","fast-xml-parser":"^5.3.0","lucide-react":"^0.468.0","pixi.js":"^8.14.0","react":"^19.2.0","react-dom":"^19.2.0","tailwind-merge":"^3.3.1","zustand":"^5.0.8"},"devDependencies":{"@tailwindcss/vite":"^4.1.16","@types/react":"^19.2.2","@types/react-dom":"^19.2.2","@vitejs/plugin-react":"^5.0.4","tailwindcss":"^4.1.16","typescript":"~5.9.3","vite":"^7.1.12","vitest":"^5.0.5"}}
+{
+  "name": "gpx-pixel-adventure",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.3.0",
+    "lucide-react": "^0.468.0",
+    "pixi.js": "^8.14.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.3.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.16",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "husky": "^9.1.7",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4.1.16",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.12",
+    "vitest": "^5.0.5"
+  }
+}

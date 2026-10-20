@@ -1,0 +1,67 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: '0'
+
+jobs:
+  checks:
+    name: Format, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    name: Deploy to Vercel
+    needs: checks
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      vars.VERCEL_ORG_ID != '' &&
+      vars.VERCEL_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: vercel-production
+      cancel-in-progress: false
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Check deployment credentials
+        run: ': "${VERCEL_TOKEN:?Set the VERCEL_TOKEN GitHub Actions secret before enabling deployment}"'
+      - run: npm ci
+      - name: Pull production settings
+        run: npx --yes vercel@64.7.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: Build for Vercel
+        run: npx --yes vercel@64.7.0 build --prod --token="$VERCEL_TOKEN"
+      - name: Deploy production
+        run: npx --yes vercel@64.7.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN"

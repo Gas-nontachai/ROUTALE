@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vercel/
+.husky/_/
+package-lock.json
+*.tsbuildinfo
+public/**/*.gpx
