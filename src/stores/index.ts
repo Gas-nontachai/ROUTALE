@@ -1,0 +1,6 @@
+import { create } from 'zustand';
+import type { Activity, World } from '../lib/route';
+export const useGpxStore = create<{ activity: Activity | null; status: 'idle' | 'loading' | 'ready' | 'error'; error: string; set: (value: Partial<{ activity: Activity | null; status: 'idle' | 'loading' | 'ready' | 'error'; error: string }>) => void }>(set => ({ activity: null, status: 'idle', error: '', set }));
+export const useWorldStore = create<{ world: World | null; status: 'idle' | 'ready'; setWorld: (world: World) => void }>(set => ({ world: null, status: 'idle', setWorld: world => set({ world, status: 'ready' }) }));
+export type Playback = 'Ready' | 'Playing' | 'Paused' | 'Completed';
+export const useSimulationStore = create<{ status: Playback; distance: number; waypoint: number; speed: number; resetToken: number; setStatus: (status: Playback) => void; update: (distance: number, total: number) => void; restart: () => void }>(set => ({ status: 'Ready', distance: 0, waypoint: 0, speed: 85, resetToken: 0, setStatus: status => set({ status }), update: (distance, total) => set({ distance, waypoint: Math.min(6, Math.floor(distance / total * 6)), ...(distance >= total ? { status: 'Completed' as const } : {}) }), restart: () => set(state => ({ status: 'Ready', distance: 0, waypoint: 0, resetToken: state.resetToken + 1 })) }));
