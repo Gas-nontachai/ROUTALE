@@ -1783,35 +1783,143 @@ input:focus-visible {
   background: #f7f5eb;
   z-index: 3;
 }
+.summary-pending .journey-map-layer,
+.summary-pending .journey-summary-layer {
+  visibility: hidden !important;
+}
 .journey-summary {
-  padding: clamp(20px, 4vw, 42px);
-  text-align: center;
+  padding: 18px;
+  text-align: left;
+  color: #183e2c;
+  background: #f7f9f4;
+}
+.summary-header,
+.summary-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.summary-header {
+  justify-content: space-between;
+  height: 44px;
+}
+.summary-title {
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
 .journey-summary h2 {
-  margin: 10px 0;
-  font-size: clamp(24px, 3vw, 36px);
+  margin: 0;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
-.summary-route {
-  display: block;
-  width: 100%;
-  height: 170px;
-  color: #347a5b;
-  margin: 10px auto;
+.summary-type {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #d9efbd;
+  color: #2b633f;
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.summary-replay.button {
+  flex-shrink: 0;
+  border: 1px solid #cbdcce;
+  border-radius: 9px;
+  background: transparent;
+  color: #285d3e;
+  box-shadow: none;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.summary-map-space {
+  height: 180px;
+  margin: 12px 0 18px;
 }
 .summary-statistics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin: 16px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
 }
-.summary-statistics dt,
-.summary-endpoints {
-  font-size: 12px;
-  color: #606b5e;
+.summary-statistics > div {
+  min-width: 0;
+  padding-right: 12px;
+}
+.summary-statistics > div:nth-child(-n + 3) {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #c6d6c8;
+}
+.summary-statistics dt {
+  font-size: 11px;
+  color: #667d6d;
+}
+.summary-statistics > div:nth-child(-n + 3) dt {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+  font-weight: 500;
 }
 .summary-statistics dd {
-  margin: 5px 0 0;
+  margin: 0;
+  font-size: clamp(18px, 2vw, 26px);
   font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.summary-statistics > div:nth-child(n + 4) {
+  padding-top: 12px;
+}
+.summary-statistics > div:nth-child(n + 4) dd {
+  font-size: 18px;
+  margin-top: 4px;
+}
+.journey-summary > p {
+  color: #667d6d;
+  font-size: 11px;
+}
+.simulation-layout:has(.show-summary) {
+  align-items: start;
+}
+.simulation-canvas.show-summary {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+.show-summary .journey-summary-layer {
+  position: relative;
+  overflow: visible;
+}
+.show-summary .journey-map-layer {
+  inset: 74px 18px auto;
+  height: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 4;
+}
+.show-summary .map-toolbar,
+.show-summary .maplibregl-control-container,
+.show-summary .maplibregl-marker,
+.show-summary .maplibregl-popup {
+  display: none;
+}
+.show-summary .route-map {
+  pointer-events: none;
+}
+.show-summary .maplibregl-canvas {
+  cursor: default;
 }
 .summary-actions {
   margin-top: 18px;
@@ -1836,12 +1944,51 @@ input:focus-visible {
   transform: translateY(calc(-1 * var(--stride, 0px)));
 }
 @media (max-width: 600px) {
-  .summary-statistics {
-    grid-template-columns: repeat(2, 1fr);
+  .journey-summary {
+    padding: 14px;
+  }
+  .summary-header {
     gap: 10px;
   }
-  .summary-route {
-    height: 110px;
+  .summary-title {
+    display: block;
+  }
+  .summary-type {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+  .summary-replay.button {
+    padding: 7px;
+  }
+  .summary-replay span {
+    display: none;
+  }
+  .summary-map-space {
+    height: 160px;
+    margin: 10px 0 16px;
+  }
+  .show-summary .journey-map-layer {
+    inset: 68px 14px auto;
+    height: 160px;
+  }
+  .summary-statistics > div {
+    padding-right: 8px;
+  }
+  .summary-statistics dd {
+    font-size: clamp(16px, 4vw, 21px);
+    letter-spacing: -0.5px;
+  }
+  .summary-statistics > div:nth-child(-n + 3) dt {
+    font-size: 9px;
+    letter-spacing: 0.7px;
+  }
+  .summary-statistics dt {
+    font-size: 11px;
+  }
+  .summary-statistics > div:nth-child(n + 4) dd {
+    font-size: 15px;
   }
 }
 

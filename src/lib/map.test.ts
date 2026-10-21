@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { bearing, routeCoordinates, visibleRoute, travelerFacing } from './map';
-import { createWorld, parseGpx } from './route';
+import {
+  bearing,
+  routeBounds,
+  routeCoordinates,
+  visibleRoute,
+  travelerFacing,
+} from './map';
+import { createWorld, parseGpx, unproject } from './route';
 
 const point = (lat: number, lon: number) =>
   `<trkpt lat="${lat}" lon="${lon}"/>`;
@@ -14,6 +20,41 @@ describe('MapLibre route data', () => {
   it('preserves route segments without drawing across gaps', () => {
     expect(routeCoordinates(world)).toHaveLength(2);
     expect(visibleRoute(world, world.distance)).toHaveLength(2);
+  });
+
+  it('bounds the entire route including disconnected segments, independent of playback progress', () => {
+    const [southwest, northeast] = routeBounds(world);
+    expect(southwest[0]).toBeCloseTo(0);
+    expect(southwest[1]).toBeCloseTo(0);
+    expect(northeast[0]).toBeCloseTo(1.01);
+    expect(northeast[1]).toBeCloseTo(1);
+    expect(visibleRoute(world, 0)).toEqual([]);
+    for (const segment of routeCoordinates(world))
+      for (const [lon, lat] of segment) {
+        expect(lon).toBeGreaterThanOrEqual(southwest[0]);
+        expect(lon).toBeLessThanOrEqual(northeast[0]);
+        expect(lat).toBeGreaterThanOrEqual(southwest[1]);
+        expect(lat).toBeLessThanOrEqual(northeast[1]);
+      }
+  });
+
+  it('keeps start and finish marker coordinates at the GPX endpoints across segments', () => {
+    const endpoints = world.spots.filter(
+      (spot) => spot.type === 'start' || spot.type === 'finish',
+    );
+    expect(endpoints.map((spot) => spot.type)).toEqual(['start', 'finish']);
+    for (const [index, point] of [
+      world.processed.segments[0][0],
+      world.processed.segments.at(-1)!.at(-1)!,
+    ].entries()) {
+      const coordinate = unproject(
+        world,
+        endpoints[index].x,
+        endpoints[index].y,
+      );
+      expect(coordinate.lon).toBeCloseTo(point.lon, 8);
+      expect(coordinate.lat).toBeCloseTo(point.lat, 8);
+    }
   });
 
   it('interpolates the travelled line at the current route distance', () => {

@@ -9,6 +9,13 @@ export const smootherstep = (t: number) => {
   t = clamp(t);
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
+export const completionPresentation = (progress: number) => ({
+  summary: progress >= 0.5,
+  opacity:
+    progress < 0.5
+      ? 1 - smootherstep(progress * 2)
+      : smootherstep((progress - 0.5) * 2),
+});
 export const angleDelta = (from: number, to: number) =>
   ((((to - from + 540) % 360) + 360) % 360) - 180;
 export const angleLerp = (from: number, to: number, t: number) =>

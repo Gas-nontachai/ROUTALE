@@ -4,11 +4,37 @@ import hike from '../../public/Lunch_Hike.gpx?raw';
 import alpine from './fixtures/alpine-terrain.gpx?raw';
 import { buildJourney, evaluateJourney } from './journey';
 import { createWorld, parseGpx } from './route';
-import { angleDelta, motionProfile, smoothstep, smootherstep } from './motion';
+import {
+  angleDelta,
+  completionPresentation,
+  motionProfile,
+  smoothstep,
+  smootherstep,
+} from './motion';
 
 const world = createWorld(parseGpx(smartDemo));
 const journey = buildJourney(world);
 describe('single deterministic journey timeline', () => {
+  it('crossfades the route and summary with a stationary, invisible framing handoff', () => {
+    expect(completionPresentation(0)).toEqual({ summary: false, opacity: 1 });
+    expect(completionPresentation(0.5)).toEqual({ summary: true, opacity: 0 });
+    expect(completionPresentation(1)).toEqual({ summary: true, opacity: 1 });
+    for (const progress of [0.001, 0.1, 0.25, 0.49]) {
+      expect(completionPresentation(progress).opacity).toBeCloseTo(
+        completionPresentation(1 - progress).opacity,
+        10,
+      );
+    }
+    // Quintic easing approaches the swap with zero velocity on both sides.
+    expect(completionPresentation(0.499).opacity).toBeLessThan(0.000001);
+    expect(completionPresentation(0.501).opacity).toBeLessThan(0.000001);
+    const reduced = buildJourney(world, true);
+    expect(
+      completionPresentation(
+        evaluateJourney(reduced, reduced.total).completionProgress,
+      ),
+    ).toEqual({ summary: true, opacity: 1 });
+  });
   it('evaluates the same character, camera and reveal regardless of evaluation order', () => {
     const time = journey.intro + world.duration * 0.63;
     const expected = evaluateJourney(journey, time);

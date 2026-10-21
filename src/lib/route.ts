@@ -17,6 +17,7 @@ export type Point = {
 };
 export type Activity = {
   name: string;
+  type?: string;
   count: number;
   segments: GPSPoint[][];
   distance: number;
@@ -161,6 +162,7 @@ export function parseGpx(
         list<any>(root.rte)[0]?.name ||
         filename.replace(/\.gpx$/i, ''),
     ),
+    type: String(tracks[0]?.type || list<any>(root.rte)[0]?.type || ''),
     count,
     segments,
     distance,

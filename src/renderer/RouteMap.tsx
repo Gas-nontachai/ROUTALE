@@ -8,14 +8,19 @@ import type {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { cameraOwner } from '../lib/camera';
-import { motionProfile } from '../lib/motion';
+import { completionPresentation, motionProfile } from '../lib/motion';
 import {
   configureTerrain,
   drawnTerrainElevation,
   terrainProfile,
 } from '../lib/terrain';
 import { unproject } from '../lib/route';
-import { routeCoordinates, visibleRoute, travelerFacing } from '../lib/map';
+import {
+  routeCoordinates,
+  routeBounds,
+  visibleRoute,
+  travelerFacing,
+} from '../lib/map';
 import type { JourneyEngine } from '../hooks/useJourney';
 import { useSimulationStore } from '../stores';
 maplibregl.setWorkerUrl(workerUrl);
@@ -82,6 +87,47 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       return;
     }
     mapRef.current = map;
+    const summaryBounds = routeBounds(world);
+    const container = host.current.closest('.simulation-canvas');
+    let summarySize = '',
+      summaryFrame = 0,
+      summaryActive = completionPresentation(
+        engine.frame.completionProgress,
+      ).summary;
+    const revealSummary = () => {
+      container?.classList.remove('summary-pending');
+    };
+    const fitSummary = () => {
+      if (
+        !summaryActive ||
+        !loaded ||
+        !container?.classList.contains('show-summary')
+      )
+        return;
+      const size = `${host.current?.clientWidth}:${host.current?.clientHeight}`;
+      if (size === summarySize) return;
+      summarySize = size;
+      map.resize();
+      container.classList.add('summary-pending');
+      map.off('render', revealSummary);
+      map.setMinZoom(0);
+      map.setCenterClampedToGround(true);
+      map.jumpTo({ bearing: 0, pitch: 0 });
+      map.fitBounds(summaryBounds, {
+        padding: 40,
+        maxZoom: 16,
+        bearing: 0,
+        pitch: 0,
+        duration: 0,
+      });
+      // Reveal both layers after the resized map has painted, without waiting for network idle.
+      map.once('render', revealSummary);
+    };
+    const resize = new ResizeObserver(() => {
+      map.resize();
+      fitSummary();
+    });
+    resize.observe(host.current);
     let owner = 'user';
     const setOwnership = (next: string) => {
       owner = next;
@@ -121,6 +167,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         .addEventListener(event, userInput, { capture: true, passive: true });
     const disconnect = engine.connect({
       read: () => {
+        // Summary framing belongs to the renderer, never to the playback camera.
+        if (summaryActive) return engine.frame.camera;
         const center = map.getCenter();
         return {
           center: [center.lng, center.lat],
@@ -131,6 +179,17 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         };
       },
       stop: () => {
+        if (summaryActive) {
+          summarySize = '';
+          map.setMinZoom(motionProfile.minZoom);
+          map.jumpTo({
+            ...engine.frame.camera,
+            pitch: terrainEnabled.current ? engine.frame.camera.pitch : 0,
+            elevation: terrainEnabled.current
+              ? engine.frame.camera.elevation
+              : 0,
+          });
+        }
         setOwnership('timeline');
         map.stop();
       },
@@ -309,21 +368,72 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
             'circle-stroke-width': 2,
           },
         });
+      if (!map.getLayer('summary-endpoints'))
+        map.addLayer({
+          id: 'summary-endpoints',
+          type: 'circle',
+          source: 'route-spots',
+          filter: ['in', ['get', 'kind'], ['literal', ['start', 'finish']]],
+          layout: { visibility: 'none' },
+          paint: {
+            'circle-radius': 3,
+            'circle-pitch-alignment': 'viewport',
+            'circle-pitch-scale': 'viewport',
+            'circle-color': [
+              'match',
+              ['get', 'kind'],
+              'start',
+              '#6f927b',
+              '#c58b65',
+            ],
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1,
+          },
+        });
+      summarySize = '';
       installTerrain();
     };
     let loaded = false,
       fallbackStarted = false,
       lastDistance = -1;
     const render = (frame: JourneyEngine['frame']) => {
+      const wasSummary = summaryActive;
+      summaryActive = completionPresentation(frame.completionProgress).summary;
       if (owner !== frame.owner) setOwnership(frame.owner);
+      element.hidden = summaryActive;
       if (!loaded) return;
+      map.setLayoutProperty(
+        'summary-endpoints',
+        'visibility',
+        summaryActive ? 'visible' : 'none',
+      );
+      if (!summaryActive) {
+        summarySize = '';
+        cancelAnimationFrame(summaryFrame);
+        map.off('render', revealSummary);
+        revealSummary();
+      }
+      map.setLayoutProperty(
+        'route-spots',
+        'visibility',
+        summaryActive ? 'none' : 'visible',
+      );
+      map.setLayoutProperty(
+        'travelled-line',
+        'visibility',
+        summaryActive ? 'none' : 'visible',
+      );
+      if (summaryActive && (!wasSummary || !summarySize)) {
+        container?.classList.add('summary-pending');
+        summaryFrame = requestAnimationFrame(fitSummary);
+      }
       const position = unproject(world, frame.position.x, frame.position.y);
       character.setLngLat([position.lon, position.lat]);
       element.style.setProperty(
         '--stride',
         `${Math.sin(frame.elapsed * 12) * (frame.position.movement === 'stay' || frame.completionProgress > 0 || engine.journey.reducedMotion ? 0 : 2)}px`,
       );
-      if (frame.owner === 'timeline')
+      if (!summaryActive && (frame.owner === 'timeline' || wasSummary))
         map.jumpTo({
           center: frame.camera.center,
           zoom: frame.camera.zoom,
@@ -364,6 +474,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       loaded = true;
       setReady(true);
       render(engine.frame);
+      fitSummary();
     });
     map.on('error', (event) => {
       const sourceId = (event as maplibregl.ErrorEvent & { sourceId?: string })
@@ -403,6 +514,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     }, 15000);
     const unsubscribe = engine.subscribe(render);
     return () => {
+      cancelAnimationFrame(summaryFrame);
+      map.off('render', revealSummary);
+      revealSummary();
       clearTimeout(timeout);
       clearTimeout(terrainTimeout);
       configureTerrainRef.current = () => {};
@@ -411,6 +525,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       for (const event of inputEvents)
         map.getContainer().removeEventListener(event, userInput, true);
       character.remove();
+      resize.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -419,7 +534,11 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     <div
       className="route-map"
       ref={host}
-      aria-label="Interactive 3D map with GPX route"
+      aria-label={
+        status === 'Completed'
+          ? 'Top-down overview of the complete GPX route'
+          : 'Interactive 3D map with GPX route'
+      }
     >
       {!ready && (
         <div className="map-loading" role="status">

@@ -11,6 +11,19 @@ export function routeCoordinates(world: World): Coordinate[][] {
   );
 }
 
+export function routeBounds(world: World): [Coordinate, Coordinate] {
+  const southwest: Coordinate = [Infinity, Infinity];
+  const northeast: Coordinate = [-Infinity, -Infinity];
+  for (const segment of routeCoordinates(world))
+    for (const [lon, lat] of segment) {
+      southwest[0] = Math.min(southwest[0], lon);
+      southwest[1] = Math.min(southwest[1], lat);
+      northeast[0] = Math.max(northeast[0], lon);
+      northeast[1] = Math.max(northeast[1], lat);
+    }
+  return [southwest, northeast];
+}
+
 export function visibleRoute(world: World, distance: number): Coordinate[][] {
   return world.segments.flatMap((segment) => {
     if (distance <= segment[0].distance) return [];

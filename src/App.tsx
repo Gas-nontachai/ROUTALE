@@ -31,6 +31,7 @@ import {
 import { Button } from './components/ui/button';
 import { AdventureStats, durationLabel } from './components/AdventureStats';
 import { animationAt, type Activity, type World } from './lib/route';
+import { completionPresentation } from './lib/motion';
 import { useJourney } from './hooks/useJourney';
 import { JourneySummary } from './components/JourneySummary';
 import { useGpxStore, useWorldStore, useSimulationStore } from './stores';
@@ -70,14 +71,16 @@ export default function App() {
     return engine.subscribe((frame) => {
       const map = mapContainer.current,
         summary = summaryContainer.current;
+      const view = completionPresentation(frame.completionProgress);
+      map?.parentElement?.classList.toggle('show-summary', view.summary);
       if (map) {
-        map.style.opacity = String(1 - frame.reveal);
-        map.inert = frame.reveal === 1;
+        map.style.opacity = String(view.opacity);
+        map.inert = view.summary;
       }
       if (summary) {
-        summary.style.opacity = String(frame.reveal);
-        summary.style.transform = `translateY(${engine.journey.reducedMotion ? 0 : (1 - frame.reveal) * 12}px)`;
-        summary.style.visibility = frame.reveal > 0 ? 'visible' : 'hidden';
+        summary.style.opacity = String(view.summary ? view.opacity : 0);
+        summary.style.transform = `translateY(${engine.journey.reducedMotion ? 0 : (1 - view.opacity) * 12}px)`;
+        summary.style.visibility = view.summary ? 'visible' : 'hidden';
         summary.inert = frame.phase !== 'Completed';
       }
     });
@@ -472,6 +475,7 @@ export default function App() {
                       <JourneySummary
                         world={world}
                         name={activity.name}
+                        activityType={activity.type}
                         replay={() => {
                           simulation.restart();
                           simulation.begin();

@@ -19,6 +19,18 @@ describe('GPX import and route geometry', () => {
     expect(activity.distance).toBeCloseTo(1111.95, 0);
     expect(activity.segments[0][0].time).toBe('2026-10-18T07:00:00Z');
   });
+  it('preserves GPX activity type without guessing when absent', () => {
+    const xml = gpx(point(1, 2) + point(1.01, 2));
+    expect(
+      parseGpx(xml.replace('<name>', '<type>Hiking</type><name>')).type,
+    ).toBe('Hiking');
+    expect(parseGpx(xml).type).toBe('');
+    expect(
+      parseGpx(
+        '<gpx><rte><type>Cycling</type><rtept lat="1" lon="2"/><rtept lat="1.01" lon="2"/></rte></gpx>',
+      ).type,
+    ).toBe('Cycling');
+  });
   it('rejects malformed XML, entities, non GPX, missing coordinates and stationary tracks', () => {
     for (const xml of [
       '<gpx>',
