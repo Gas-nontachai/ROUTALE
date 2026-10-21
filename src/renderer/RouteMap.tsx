@@ -470,9 +470,6 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           </select>
         </label>
       </div>
-      <div className="map-status" aria-live="polite">
-        {message}
-      </div>
     </div>
   );
 }

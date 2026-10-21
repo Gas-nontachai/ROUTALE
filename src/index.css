@@ -1,17 +1,39 @@
 @import 'tailwindcss';
 
 @font-face {
-  font-family: 'iannnnnAMD';
-  src: url('./assets/fonts/2005_iannnnnAMD-fixed.ttf') format('truetype');
+  font-family: 'Kanit';
+  src: url('./assets/fonts/Kanit-Regular.ttf') format('truetype');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  size-adjust: 200%;
-  unicode-range: U+0-00B6, U+00B8-10FFFF;
+}
+
+@font-face {
+  font-family: 'Kanit';
+  src: url('./assets/fonts/Kanit-Medium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kanit';
+  src: url('./assets/fonts/Kanit-SemiBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kanit';
+  src: url('./assets/fonts/Kanit-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
 }
 
 :root {
-  --font-trailbound: 'iannnnnAMD', sans-serif;
+  --font-trailbound: 'Kanit', sans-serif;
   font-family: var(--font-trailbound);
   color: #203d2e;
   background: #f6f5ed;
@@ -778,18 +800,6 @@ footer > span:nth-child(2) {
   color: #334c3e;
   font-size: 12px;
 }
-.map-status {
-  position: absolute;
-  z-index: 2;
-  bottom: 28px;
-  left: 12px;
-  max-width: min(440px, calc(100% - 24px));
-  padding: 6px 9px;
-  background: #fffdf2e8;
-  color: #435848;
-  font-size: 9px;
-  line-height: 1.5;
-}
 .route-character-marker {
   width: 18px;
   height: 18px;
@@ -805,7 +815,7 @@ footer > span:nth-child(2) {
   box-shadow: 2px 2px 0 #203d2e33;
 }
 .route-map .maplibregl-ctrl-attrib {
-  font-family: sans-serif;
+  font-family: var(--font-trailbound);
   font-size: 10px;
 }
 .camera-label {
