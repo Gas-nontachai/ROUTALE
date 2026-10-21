@@ -1,2 +1,10 @@
-npm run format:check
+#!/usr/bin/env sh
+set -e
+
+echo "🎨 Formatting staged files..."
+npx lint-staged
+
+echo "🧪 Running tests..."
 npm test
+
+echo "✅ All pre-commit checks passed!"
