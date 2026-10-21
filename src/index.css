@@ -84,11 +84,6 @@ h2,
 p {
   margin: 0;
 }
-.app-shell {
-  max-width: 1600px;
-  margin: auto;
-  padding: 0 64px;
-}
 .site-header {
   height: 103px;
   display: flex;
@@ -154,10 +149,6 @@ p {
 }
 .text-button span {
   color: #8d957e;
-}
-main {
-  min-height: calc(100vh - 181px);
-  padding-top: 50px;
 }
 .page-heading {
   text-align: center;
@@ -571,32 +562,6 @@ h2 {
   color: #909681;
   margin-top: 5px;
   line-height: 1.5;
-}
-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid var(--border);
-  height: 78px;
-  color: #929a83;
-  gap: 15px;
-  font-family: var(--font-trailbound);
-  font-size: 7px;
-  letter-spacing: 1px;
-}
-footer > span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-footer > span:nth-child(2) {
-  font-family: var(--font-trailbound);
-  font-size: 10px;
-  letter-spacing: 0;
-}
-.footer-dot {
-  font-size: 5px;
-  margin: 0 5px;
 }
 .error {
   font-size: 12px;
@@ -1114,9 +1079,6 @@ progress::-moz-progress-bar {
   margin-left: auto;
 }
 @media (min-width: 1500px) {
-  main {
-    padding-top: 65px;
-  }
   .page-heading {
     margin-bottom: 45px;
   }
@@ -1141,9 +1103,6 @@ progress::-moz-progress-bar {
   }
 }
 @media (max-width: 1050px) {
-  .app-shell {
-    padding: 0 30px;
-  }
   .import-panel {
     padding: 24px 22px 0;
   }
@@ -1185,9 +1144,6 @@ progress::-moz-progress-bar {
   }
 }
 @media (max-width: 760px) {
-  .app-shell {
-    padding: 0 20px;
-  }
   .site-header {
     height: 82px;
   }
@@ -1211,9 +1167,6 @@ progress::-moz-progress-bar {
   }
   .text-button {
     font-size: 10px;
-  }
-  main {
-    padding-top: 35px;
   }
   h1 {
     font-size: 36px;
@@ -1266,20 +1219,6 @@ progress::-moz-progress-bar {
   }
   .how-strip > div {
     gap: 15px;
-  }
-  footer {
-    height: auto;
-    min-height: 90px;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 20px 0;
-    font-size: 6px;
-  }
-  footer > span:nth-child(2) {
-    width: 100%;
-    justify-content: center;
-    order: 3;
-    font-size: 9px;
   }
   .simulation-heading h1 {
     font-size: 22px;
