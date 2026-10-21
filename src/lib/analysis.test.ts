@@ -44,6 +44,23 @@ function laps(count: number, reverse = false, approach = false) {
   return points;
 }
 describe('smart route analysis', () => {
+  it('precomputes moving time and averages only with complete monotonic timestamps', () => {
+    const result = analyzeRoute(
+      activity([p(0, 0, 0), p(100, 0, 60), p(100, 0, 120), p(200, 0, 180)]),
+    );
+    expect(result.stats.duration).toBe(180);
+    expect(result.stats.movingTime).toBe(120);
+    expect(result.stats.averageSpeed).toBeCloseTo(200 / 180, 4);
+    for (const points of [
+      [p(0, 0, 0), p(100, 0), p(200, 0, 180)],
+      [p(0, 0, 60), p(100, 0, 30), p(200, 0, 180)],
+    ]) {
+      const partial = analyzeRoute(activity(points));
+      expect(partial.stats.partialTime).toBe(true);
+      expect(partial.stats.movingTime).toBeUndefined();
+      expect(partial.stats.averageSpeed).toBeUndefined();
+    }
+  });
   it('counts all six laps in the combined demo next to a rest and out-and-back hike', () => {
     const world = createWorld(parseGpx(smartDemo));
     expect(
@@ -80,7 +97,8 @@ describe('smart route analysis', () => {
     expect(middle.movement).toBe('stay');
     expect(world.processed.stats.duration).toBe(750);
     expect(world.distance).toBeCloseTo(original.distance, 5);
-    expect(world.duration).toBeLessThan(world.distance / 85);
+    expect(world.duration).toBeGreaterThanOrEqual(20);
+    expect(world.duration).toBeLessThanOrEqual(180);
   });
   it('counts repeated ordered laps with GPS jitter and accelerates only laps after the first two', () => {
     const world = createWorld(activity(laps(10)));
@@ -88,7 +106,11 @@ describe('smart route analysis', () => {
     expect(loops).toHaveLength(1);
     expect(loops[0].loopCount).toBe(10);
     expect(world.steps.some((s) => s.type === 'loop')).toBe(true);
-    expect(world.duration).toBeLessThan((world.distance / 85) * 0.5);
+    const normal = world.steps.find((s) => s.type === 'normal')!;
+    const compressed = world.steps.find((s) => s.type === 'loop')!;
+    const speed = (s: typeof normal) =>
+      (s.to.distance - s.from.distance) / (s.end - s.start);
+    expect(speed(compressed)).toBeCloseTo(speed(normal) * 12, 3);
     expect(world.spots.find((s) => s.type === 'loop')?.label).toBe('10 laps');
     expect(animationAt(world, world.duration).distance).toBeCloseTo(
       world.distance,
@@ -120,7 +142,8 @@ describe('smart route analysis', () => {
       ),
     ).toHaveLength(0);
     expect(world.steps.some((s) => s.type === 'backtracking')).toBe(true);
-    expect(world.duration).toBeCloseTo(world.distance / 85, 2);
+    expect(world.duration).toBeGreaterThanOrEqual(20);
+    expect(world.duration).toBeLessThanOrEqual(180);
     expect(world.processed.stats.ascent).toBeGreaterThan(100);
     expect(world.processed.stats.descent).toBeGreaterThan(100);
     expect(world.spots.find((s) => s.type === 'summit')?.label).toBe(

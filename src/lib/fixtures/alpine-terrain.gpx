@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="Synthetic terrain QA" xmlns="http://www.topografix.com/GPX/1/1"><metadata><desc>Synthetic geometry for rendering tests only; not a recorded activity or a navigable trail. No GPX elevations: all visible relief must come from real DEM.</desc></metadata><trk><name>Alpine Terrain QA · synthetic route</name><trkseg>
+<trkpt lat="45.912" lon="6.87"/>
+<trkpt lat="45.914" lon="6.873"/>
+<trkpt lat="45.916" lon="6.877"/>
+<trkpt lat="45.918" lon="6.88"/>
+<trkpt lat="45.92" lon="6.883"/>
+<trkpt lat="45.923" lon="6.886"/>
+<trkpt lat="45.926" lon="6.889"/>
+<trkpt lat="45.93" lon="6.892"/>
+<trkpt lat="45.934" lon="6.895"/>
+<trkpt lat="45.938" lon="6.898"/>
+<trkpt lat="45.942" lon="6.9"/>
+</trkseg></trk></gpx>

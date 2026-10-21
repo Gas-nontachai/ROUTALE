@@ -1,62 +1,51 @@
-# Trailbound — GPX Pixel Adventure 1.1
+# GPX Pixel Adventure v1.3 — 3D Journey Experience
 
-A client-side GPX adventure: quality-filtered movement analysis, compressed replay, opt-in OpenStreetMap and DEM data, and a height-aware isometric pixel world. No backend, account, database, cloud storage, or new runtime dependency.
+A local GPX journey player built with React, TypeScript, MapLibre and Zustand. Import a GPX, preview its route, play the journey, then crossfade into its precomputed summary. Replay uses the same data without importing again.
 
 ## Run and check
 
 ```sh
-npm install
+npm ci
 npm run dev
-npm run format
-npm run format:check
 npm test
 npm run build
+npm run format:check
 ```
 
-Import a GPX or choose **Try a sample trail**. **Try the smart demo** includes six repeated laps, a timed rest area, and an out-and-back hike. Both bundled GPX files are synthetic fixtures, not recorded activities.
+No API keys are required. OpenFreeMap supplies the base map and Mapterhorn supplies terrain. Terrain failures fall back to 2D; base-style failures try an attributed OpenStreetMap raster fallback. Both sample GPX files are synthetic fixtures. **Try the smart demo** includes six laps, a rest and an out-and-back hike.
 
-Choose **Generate my world**, then play, pause, restart, or change replay speed (0.5×–8×). **Visual height** switches between flat, 1× and 2× elevation rendering and pauses playback while the terrain rebuilds. This visual scale does not change measured heights or statistics.
+Use Play, Pause, Resume, Restart, the seek slider or speed selection (0.5×–8×). Native buttons and the slider support keyboard operation. **View journey summary** works before playback or when the map cannot render; **Skip transition** completes the reveal immediately. Replay starts a fresh journey. Reduced motion keeps a static overview camera, removes the character stride, and reveals the summary immediately at completion.
 
-Deploy as a Vite static app on Vercel: build `npm run build`, output `dist`, no environment variables. This checkout has not been deployed.
+## Data and statistics
 
-## Original data, analysis and replay
+- The original `File` stays unmodified in memory, retaining the exact source XML and metadata. Parsed, validated segments, quality-filtered activity points and simplified playback points are separate. Playback points retain their source segment and raw point index.
+- A Web Worker parses and validates GPX, rejects entities, filters isolated implausible spikes, detects rest areas and ordered laps, computes statistics and prepares the character route. Limits remain 25 MB, 300,000 points and a 30-second processing deadline.
+- Invalid coordinates split segments. Separate track segments are never connected by invented route lines or distances. Their playback positions may jump across unrecorded gaps.
+- Summary statistics are ready before playback: distance, recorded duration, moving time, average speed/pace and elevation. The simplified overview geometry and start/finish points are also ready before rendering. Missing values display **Not available**. Duration sums positive consecutive intervals; moving time and averages require complete, monotonic timestamps. Average speed/pace use recorded duration, including rests. Moving time excludes detected dwell intervals and edges below 0.3 m/s.
+- Rest detection is heuristic: at least five minutes within an anchored 25–30 m area, including possible wandering. A dwell normally uses two replay seconds; recordings with many rests share a bounded dwell budget. Recorded statistics retain that activity. Ordered repeated laps retain every lap; laps after the first two run at 12× relative speed. Backtracking is preserved.
+- Elevation uses a local median where neighboring samples exist. Missing elevation is never replaced with map terrain. GPS optimization and playback compression do not mutate the source file.
 
-- The original `File` is retained unmodified in the GPX store. Parsed, validated track segments remain separate from quality-filtered route points and the animation timeline. Invalid coordinates split segments; no gap distance or walking line is invented.
-- Parsing, filtering, movement analysis, simplification and timeline generation run in a Web Worker. Input limits: 25 MB, 300,000 points, 30-second processing deadline.
-- Isolated GPS spikes are filtered conservatively using distance, neighbor geometry and timestamp speed where available. Elevations use a three-point median only where all neighboring elevations exist. Missing elevations and timestamps remain unknown.
-- Statistics derive from the quality-filtered activity before compression. Duration sums valid positive consecutive time intervals within each segment; incomplete or non-monotonic time is marked partial. Elevation gain/loss use only adjacent known values. The full original input is still retained.
-- Rest detection: an anchored 25 m area, up to 5 m adaptive noise allowance, and at least 5 minutes of consecutive increasing timestamps. An area may include wandering; no claim of being motionless is made. Replay idles for 2 seconds, then resumes from the rest area.
-- Lap detection: spatial returns plus ordered, distance-resampled shape matching, with 25 m mean / 50 m maximum matching tolerances and lap lengths within 20%. Counts are preserved; first two laps play normally, remaining laps at 12×. Return-point scoring accounts for expected lap length so a rest near the end does not absorb a lap.
-- Backtracking: matching reversed movement around a turnaround is preserved at ordinary replay speed. Significant backtracking overlap prevents loop classification.
-- Simplification preserves segment boundaries, movement transitions, spots, missing-elevation boundaries, geographic corners and elevation bends. Character movement follows a separate timeline. Source distance advances through compressed activity while progress reports animation time.
-- Spots: Start, Finish, Rest area, lap count and **Track high point**. The track high point is not presented as a verified mountain summit. OSM landmarks are identified separately by their source.
+## One journey, one timeline
 
-## Real-world geography and privacy
+`src/lib/motion.ts` centralizes easing and motion limits. `src/lib/journey.ts` prepares deterministic camera samples and evaluates any timeline time; `src/hooks/useJourney.ts` owns the sole application animation loop. Character movement, shortest-angle heading interpolation, camera, travelled route, completion and crossfade all read that clock. The renderer subscribes directly; UI state is published at 10 Hz.
 
-External geographic data is **off by default**. Generating in local mode makes no map/DEM request. An unchecked, explicit option explains the data sent before enabling these requests:
+Playback duration is prepared once, between 20 and 180 seconds, using distance, turns, elevation, spots and rests. Automatic camera modes are Follow, Wide at rests and Scenic near the track high point. Preview starts at 60° pitch, with a bearing across the route or toward its high point. The bearing stays steady during playback; GPS turns and elapsed-time blocks no longer force rotation or Top-down views. Camera samples bound position speed/acceleration, angular speed/acceleration, pitch and zoom. Limits apply in journey seconds; speed selection accelerates the entire journey, including camera motion. Introductions use smooth position interpolation and smoother pitch/zoom easing; transitions that exceed the intro budget keep the overview and let constrained following catch up. The camera brakes before the finish and settles without a final bearing spin.
 
-- [OpenStreetMap via Private.coffee’s Overpass service](https://overpass.private.coffee/): bounding rectangle for the activity area, not the GPX file or its timestamps. One bounded query fetches roads, footpaths, buildings, forest/grass/water areas and landmarks. Map attribution: OSM contributors, ODbL.
-- [Open-Meteo elevation](https://github.com/open-meteo/open-meteo/blob/main/openapi/elevation.yml): an 8 × 8 coordinate grid across that area, requesting the provider's 90 m DEM source. This is a coarse terrain preview, not a survey. Attribution: Open-Meteo / Copernicus GLO-90, CC BY 4.0. The public Open-Meteo endpoint is intended for non-commercial use; commercial deployment needs an appropriate provider plan.
+Completion is part of the same timeline. The traveler stops, the map remains mounted, and the summary crossfades with eased opacity and a subtle translation. The summary uses a local SVG overview and precomputed activity statistics, so it does not depend on terrain or map loading. A rendering error boundary preserves controls and summary access.
 
-Only a small, five-minute in-memory request cache is used. The application does not persist routes or responses; external providers receive the disclosed geographic area and may log requests under their own policies. Browser HTTP caching remains subject to provider headers. Interface text and world labels use the bundled `src/assets/fonts/2005_iannnnnAMD-fixed.ttf`, with system fallbacks. No font-provider requests are made.
+Terrain defaults to 1.5× relief, selectable between 1.0× and 2.0× before playback. A separate Terrarium DEM source supplies subtle, map-anchored hillshade beneath labels and the route. The status stays loading until MapLibre reports drawn DEM coverage at the view center (including valid zero-meter terrain). Source failures or a 20-second DEM timeout disable terrain and hillshade, flatten the camera, and allow retry with fresh sources. A hillshade-only failure leaves terrain usable. Loading uses MapLibre render events, not another animation clock.
 
-Each provider has an independent 25-second timeout, response validation, and a clear fallback message. Data access is bounded to local areas (latitude/longitude spans at most 0.18°, not crossing the date line) to avoid unbounded public API queries. Larger routes still replay locally. Overpass way geometry and tagged landmark nodes are supported; relation-only multipolygons may be absent and are treated as incomplete map coverage.
+The character is a small SVG traveler anchored by its feet to the terrain, using MapLibre’s terrain projection and subpixel positioning; its stride and direction come from journey time. Route lines are draped by MapLibre, and route circles align to the map surface. GPX elevations are never added again as marker offsets, so exaggeration does not double their height. It is not a custom 3D model. Lower-core devices request a lower terrain zoom ceiling. MapLibre is lazy-loaded and disposed on exit.
 
-## Terrain and artwork
+## Privacy and limits
 
-The PixiJS renderer uses layered isometric terrain tiles. Visual height is `(elevation − minimum) × visual scale × exaggeration`. DEM heights are interpolated across the grid. Without DEM, known GPX elevations provide an explicitly labeled estimate around the route; with neither source, the world stays flat. Measured GPX heights drive the trail and character where available. DEM values never fill activity statistics.
+GPX files and timestamps stay in the browser. Map providers receive requests for the area viewed; visible MapLibre attribution identifies providers. MapLibre requires WebGL and maps require network access. No accounts, cloud storage, video export or sharing are included. This checkout has not been deployed.
 
-Custom, reusable image assets live in `public/assets`: a detailed pixel cottage, pine, rock and landmark marker. Buildings use the designed cottage image at their real map positions; they are not colored footprint boxes or downsampled map imagery. Assets represent feature classes, not the real architecture of each building. In real-map mode trees mark mapped forest; water and buildings suppress decorative trees. In local mode the seeded forest is illustrative. The character uses a four-direction pixel walk and an idle/rest animation. No AI API or remote art assets are used.
+Movement detection cannot reliably infer intent from severe GPS noise, very small loops or sparse recordings. Local projection suits activity-scale routes, not transcontinental or polar tracks. Camera samples are baked at 30 Hz and interpolated at render time. Production traffic should review provider usage policies; the OpenStreetMap raster fallback is intended for light usage.
 
-## Verification and limits
+Tests cover validation, missing data, source preservation, loops, stops, backtracking, progressive route rendering, adaptive duration, deterministic evaluation, pause/resume, constrained camera motion, reduced motion and completion. Browser checks use synthetic routes. `src/lib/fixtures/alpine-terrain.gpx` supplies synthetic geometry near Chamonix without GPX elevation or timestamps: visible mountains must come from DEM, while activity elevations remain unavailable. It is a rendering fixture, not a navigable trail. The older Chiang Mai samples include synthetic elevations and need not match actual relief at their coordinates. Real-device frame-rate and motion-comfort testing remain outstanding.
 
-Tests cover import validation, segmented routes, date-line projection, large straight tracks, data preservation, GPS spikes, timed rests, noisy repeated laps, direction changes, approach paths, combined rest/loop/return activity, missing data, elevation bends, geographic transforms, map classification, DEM interpolation, provider failure, caching and playback state. Browser QA uses synthetic files only.
-
-Movement detection is heuristic: irregular loops, severe GPS drift, sparse turnarounds or elevation errors can be missed. It never claims to know real intent. Local geographic projection is intended for activity-scale routes, not transcontinental/polar trips. OSM coverage and public-provider availability vary. Some terrain/landmark placement is deliberately stylized. WebGL is required. The PixiJS production bundle triggers Vite's default 500 kB chunk advisory; it is not a build failure. Real-device 60 FPS benchmarking and commercial provider setup are not included.
-
-Character creation, accounts, multiplayer, sharing, scrubbing and video export remain out of scope.
-
-Latest local check: 24 tests and the production build pass. Desktop/mobile browser checks verified completion, restart, pause/resume, playback speed and visual height controls. A live Open-Meteo DEM request succeeded. Both the main Overpass service (HTTP 406) and the selected Private.coffee service (timeout) were unavailable during testing; live OSM feature rendering is therefore unverified, although classification, projected placement and provider fallbacks have automated coverage.
+Provider setup follows the [MapLibre terrain example](https://maplibre.org/maplibre-gl-js/docs/examples/3d-terrain/) and [OpenFreeMap quick start](https://openfreemap.org/quick_start/).
 
 ## Formatting, Git hooks and CI/CD
 

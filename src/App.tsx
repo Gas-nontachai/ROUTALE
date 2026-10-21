@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronRight,
-  Compass,
   FileCheck2,
   Footprints,
   Leaf,
@@ -23,55 +30,67 @@ import {
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { AdventureStats, durationLabel } from './components/AdventureStats';
-import { loadGeography } from './lib/geography';
-import { Forest } from './renderer/PixelWorld';
-import { createWorld, type Activity, type World } from './lib/route';
-import {
-  useGpxStore,
-  useWorldStore,
-  useSimulationStore,
-  useRouteStore,
-} from './stores';
-const demoSegments = [
-  Array.from({ length: 100 }, (_, i) => ({
-    lat: 18.795 + (i / 99) * 0.022,
-    lon:
-      98.97 +
-      Math.sin((i / 99) * Math.PI * 2) * 0.006 +
-      Math.sin((i / 99) * Math.PI * 6) * 0.0013,
-  })),
-];
-const previewWorld = createWorld({
-  segments: demoSegments,
-  distance: 4000,
-  count: 100,
-  name: 'Preview',
-  ascent: 140,
-  seed: 82411,
-});
+import { animationAt, type Activity, type World } from './lib/route';
+import { useJourney } from './hooks/useJourney';
+import { JourneySummary } from './components/JourneySummary';
+import { useGpxStore, useWorldStore, useSimulationStore } from './stores';
 const km = (m: number) => `${(m / 1000).toFixed(2)} km`;
+const RouteMap = lazy(() =>
+  import('./renderer/RouteMap').then(({ RouteMap }) => ({ default: RouteMap })),
+);
+class MapBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <div className="map-loading" role="alert">
+        Map unavailable. Playback controls and your journey summary are still
+        available.
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 export default function App() {
   const { activity, status, error, set } = useGpxStore();
-  const {
-    world,
-    geography,
-    exaggeration,
-    status: worldStatus,
-    stage,
-    setWorld,
-    setGeography,
-    setExaggeration,
-    generation,
-  } = useWorldStore();
-  const setProcessed = useRouteStore((s) => s.setProcessed);
+  const { world, setWorld } = useWorldStore();
   const simulation = useSimulationStore();
-  const [screen, setScreen] = useState<'import' | 'generating' | 'world'>(
-    'import',
-  );
+  const [screen, setScreen] = useState<'import' | 'world'>('import');
+  const engine = useJourney(world, screen === 'world');
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const summaryContainer = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!engine || screen !== 'world') return;
+    return engine.subscribe((frame) => {
+      const map = mapContainer.current,
+        summary = summaryContainer.current;
+      if (map) {
+        map.style.opacity = String(1 - frame.reveal);
+        map.inert = frame.reveal === 1;
+      }
+      if (summary) {
+        summary.style.opacity = String(frame.reveal);
+        summary.style.transform = `translateY(${engine.journey.reducedMotion ? 0 : (1 - frame.reveal) * 12}px)`;
+        summary.style.visibility = frame.reveal > 0 ? 'visible' : 'hidden';
+        summary.inert = frame.phase !== 'Completed';
+      }
+    });
+  }, [engine, screen]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
-  const [mapConsent, setMapConsent] = useState(false);
+  useEffect(() => {
+    if (simulation.status === 'Completed')
+      summaryContainer.current
+        ?.querySelector<HTMLElement>('h2')
+        ?.focus({ preventScroll: true });
+  }, [simulation.status]);
   const [importStage, setImportStage] = useState('Reading your trail…');
   const [dragging, setDragging] = useState(false);
   const [filename, setFilename] = useState('');
@@ -143,8 +162,8 @@ export default function App() {
         else {
           set({ activity: data.activity, status: 'ready', error: '' });
           setWorld(data.world);
-          setProcessed(data.world.processed);
           simulation.restart();
+          setScreen('world');
         }
       };
       current.onerror = () => {
@@ -188,29 +207,10 @@ export default function App() {
   const progress = world
     ? Math.min(100, (simulation.elapsed / world.duration) * 100)
     : 0;
-  async function startAdventure() {
-    if (!world || status !== 'ready' || worldStatus === 'loading') return;
+  const currentPosition = world ? animationAt(world, simulation.elapsed) : null;
+  function startAdventure() {
+    if (!world || status !== 'ready') return;
     simulation.restart();
-    if (mapConsent) {
-      setScreen('generating');
-      generation('loading', 'Preparing the geographic area…');
-      try {
-        setGeography(
-          await loadGeography(world, (message) =>
-            generation('loading', message),
-          ),
-        );
-      } catch {
-        setGeography({
-          features: [],
-          terrain: [],
-          mapStatus: 'Map loading failed. Showing procedural scenery.',
-          demStatus:
-            'Using GPX elevation where available; otherwise flat ground.',
-        });
-      }
-      generation('ready', 'World ready');
-    } else setGeography(null);
     setScreen('world');
   }
   return (
@@ -229,7 +229,7 @@ export default function App() {
         </a>
         <div className="header-right">
           <span className="edition">
-            <span /> GPX PIXEL ADVENTURE
+            <span /> REAL-WORLD GPX SIMULATION
           </span>
           <button className="text-button" onClick={() => setHelp(true)}>
             How it works <span>↗</span>
@@ -241,16 +241,17 @@ export default function App() {
           <>
             <div className="page-heading">
               <div className="eyebrow">
-                <span /> REAL TRAILS. LITTLE WORLDS.
+                <span /> REAL TRAILS. REAL TERRAIN.
               </div>
               <h1>
                 Your journey.
-                <br />A whole new <em>world.</em>
+                <br />
+                On the <em>map.</em>
               </h1>
               <p>
-                Turn the trail you took into a pixel adventure.
-                <br className="desktop-break" /> Bring a GPX file. We’ll bring
-                the forest.
+                Bring your GPX route to a real-world map.
+                <br className="desktop-break" /> Follow every turn, climb, and
+                kilometer.
               </p>
             </div>
             <div className="adventure-layout">
@@ -290,7 +291,7 @@ export default function App() {
                     {status === 'loading'
                       ? importStage
                       : status === 'ready'
-                        ? 'Your trail is packed.'
+                        ? 'GPX ready.'
                         : 'Drop your GPX file here'}
                   </strong>
                   <span className="drop-detail">
@@ -347,28 +348,12 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <label className="map-consent">
-                  <input
-                    type="checkbox"
-                    checked={mapConsent}
-                    onChange={(e) => setMapConsent(e.target.checked)}
-                  />
-                  <span>
-                    <strong>Use real map + terrain data</strong>
-                    <small>
-                      Optional: sends this trail’s geographic bounds to
-                      OpenStreetMap via Private.coffee’s Overpass service and a
-                      64-point area grid to Open-Meteo. Your GPX file stays
-                      here. Leave off for local-only scenery.
-                    </small>
-                  </span>
-                </label>
                 <Button
                   className="generate-button"
                   disabled={status !== 'ready'}
                   onClick={startAdventure}
                 >
-                  <Sparkles size={17} /> Generate my world{' '}
+                  <Map size={17} /> Preview route on map{' '}
                   <ArrowRight size={18} />
                 </Button>
                 <div className="sample-line">
@@ -390,44 +375,9 @@ export default function App() {
                 <div className="privacy">
                   <LockKeyhole size={14} />
                   <span>
-                    Your GPX stays in your browser. External data is optional.
+                    GPX stays local. Map providers receive requests for the area
+                    you view.
                   </span>
-                </div>
-              </section>
-              <section
-                className="preview-panel"
-                aria-label="Pixel world preview"
-              >
-                <div className="preview-title">
-                  <span>
-                    <span className="live-dot" /> A LITTLE PREVIEW OF WHAT’S
-                    AHEAD
-                  </span>
-                  <span>FOREST / 01</span>
-                </div>
-                <div className="preview-scene">
-                  <Forest world={previewWorld} preview />
-                  <div className="scene-grain" />
-                  <div className="world-tag">
-                    <Trees size={15} /> THE MOSSWOOD FOREST
-                  </div>
-                  <div className="floating-label">
-                    <span className="pixel-spark">✦</span> A trail worth
-                    reliving.
-                  </div>
-                  <div className="scene-coordinates">
-                    18°47′ N &nbsp; 98°58′ E
-                  </div>
-                </div>
-                <div className="preview-caption">
-                  <span className="caption-icon">
-                    <Footprints size={21} />
-                  </span>
-                  <div>
-                    <strong>Same footsteps. Different magic.</strong>
-                    <p>Your real route, reimagined in a living pixel forest.</p>
-                  </div>
-                  <span className="little-star">✧</span>
                 </div>
               </section>
             </div>
@@ -437,8 +387,8 @@ export default function App() {
                   <Map size={20} />
                 </span>
                 <div>
-                  <strong>Your route, reimagined</strong>
-                  <p>Built from your actual GPS coordinates.</p>
+                  <strong>Your route, mapped</strong>
+                  <p>Every segment stays true to the GPX.</p>
                 </div>
               </div>
               <div>
@@ -446,8 +396,8 @@ export default function App() {
                   <Trees size={21} />
                 </span>
                 <div>
-                  <strong>A forest of your own</strong>
-                  <p>A unique world, grown around your trail.</p>
+                  <strong>Real terrain</strong>
+                  <p>Mapterhorn elevation on OpenFreeMap.</p>
                 </div>
               </div>
               <div>
@@ -455,53 +405,23 @@ export default function App() {
                   <Play size={19} />
                 </span>
                 <div>
-                  <strong>Walk it all over again</strong>
-                  <p>Press play. Let your little adventurer wander.</p>
+                  <strong>Follow the journey</strong>
+                  <p>Watch the route progress with a steady camera.</p>
                 </div>
               </div>
             </div>
           </>
-        ) : screen === 'generating' ? (
-          <section className="generation-screen" aria-live="polite">
-            <Trees size={44} />
-            <div className="eyebrow">BUILDING YOUR LITTLE WORLD</div>
-            <h1>Growing a real adventure.</h1>
-            <p>{stage}</p>
-            <progress aria-label="Loading geographic data" />
-            <ol>
-              <li>
-                <Check size={16} /> GPX validated; original preserved
-              </li>
-              <li>
-                <Check size={16} /> Movement analyzed; animation route prepared
-              </li>
-              <li>
-                <LoaderCircle size={16} className="spin" /> Map features + DEM
-                grid loading
-              </li>
-              <li>
-                <Trees size={16} /> Terrain and sprites render next
-              </li>
-            </ol>
-            <small>
-              Providers may take up to 25 seconds. Unavailable data falls back
-              to local scenery.
-            </small>
-          </section>
         ) : (
           world &&
-          activity && (
+          activity &&
+          engine && (
             <div className="simulation-page">
               <div className="simulation-heading">
                 <div>
                   <button
                     className="back-link"
                     onClick={() => {
-                      simulation.setStatus(
-                        simulation.status === 'Playing'
-                          ? 'Paused'
-                          : simulation.status,
-                      );
+                      simulation.pause();
                       setScreen('import');
                     }}
                   >
@@ -511,7 +431,7 @@ export default function App() {
                   <p>
                     {km(world?.processed.stats.distance ?? activity.distance)}{' '}
                     <span>·</span> {activity.count.toLocaleString()} GPS points{' '}
-                    <span>·</span> Forest adventure
+                    <span>·</span> 3D route simulation
                   </p>
                 </div>
                 <div
@@ -521,119 +441,57 @@ export default function App() {
                   {simulation.status === 'Playing' &&
                   simulation.movement === 'stay'
                     ? 'Resting'
-                    : simulation.status === 'Playing' &&
-                        simulation.movement === 'loop'
-                      ? 'Fast laps'
-                      : simulation.status}
-                </div>
-              </div>
-              <div className="geography-banner">
-                <span>
-                  {geography
-                    ? geography.mapStatus
-                    : 'Local mode · procedural scenery. No route location was sent to map providers.'}
-                </span>
-                <span>
-                  {geography
-                    ? geography.demStatus
-                    : world.processed.stats.minElevation === undefined
-                      ? 'No GPX elevation · flat terrain fallback.'
-                      : 'GPX-derived terrain estimate · surrounding terrain is illustrative.'}
-                </span>
-                <div>
-                  <label htmlFor="terrain-height">Visual height</label>
-                  <select
-                    id="terrain-height"
-                    value={exaggeration}
-                    onChange={(e) => {
-                      if (simulation.status === 'Playing')
-                        simulation.setStatus('Paused');
-                      setExaggeration(Number(e.target.value));
-                    }}
-                  >
-                    <option value="0">Flat</option>
-                    <option value="1">1×</option>
-                    <option value="2">2×</option>
-                  </select>
+                    : simulation.status === 'Transitioning' ||
+                        simulation.status === 'Completing'
+                      ? simulation.status === 'Completing'
+                        ? 'Finishing journey'
+                        : 'Camera intro'
+                      : simulation.status === 'Playing' &&
+                          simulation.movement === 'loop'
+                        ? 'Fast laps'
+                        : simulation.status}
                 </div>
               </div>
               <div className="simulation-layout">
                 <section className="world-panel">
-                  <div className="world-toolbar">
-                    <span>
-                      <Trees size={15} />{' '}
-                      {geography?.features.length
-                        ? 'REAL-WORLD PIXEL MAP'
-                        : 'PIXEL TERRAIN'}
-                    </span>
-                    <span>
-                      <Compass size={14} /> N ↗
-                    </span>
-                  </div>
                   <div className="simulation-canvas">
-                    <Forest
-                      world={world}
-                      geography={geography}
-                      exaggeration={exaggeration}
-                    />
-                    <div className="camera-label">
-                      <span /> FOLLOW CAMERA
+                    <div className="journey-map-layer" ref={mapContainer}>
+                      <MapBoundary key={world.seed}>
+                        <Suspense
+                          fallback={
+                            <div className="map-loading" role="status">
+                              Loading map engine…
+                            </div>
+                          }
+                        >
+                          <RouteMap engine={engine} />
+                        </Suspense>
+                      </MapBoundary>
+                    </div>
+                    <div
+                      className="journey-summary-layer"
+                      ref={summaryContainer}
+                    >
+                      <JourneySummary
+                        world={world}
+                        name={activity.name}
+                        replay={() => {
+                          simulation.restart();
+                          simulation.begin();
+                        }}
+                      />
                     </div>
                     {simulation.status === 'Ready' && (
                       <div className="ready-note">
-                        <Sparkles size={16} /> Your next little adventure is
-                        ready.
-                      </div>
-                    )}
-                    {simulation.status === 'Completed' && (
-                      <div className="completed-note">
-                        <span>✦</span>
-                        <h2>Trail conquered.</h2>
-                        <p>Every step, a little bit of magic.</p>
-                        <Button onClick={simulation.restart}>
-                          <RotateCcw size={15} /> Walk it again
-                        </Button>
+                        <Sparkles size={16} /> Route ready · press play to
+                        follow it.
                       </div>
                     )}
                   </div>
                 </section>
                 <aside className="journey-panel">
                   <div className="eyebrow">YOUR ADVENTURE</div>
-                  <h2>One step at a time.</h2>
-                  <div className="mini-map">
-                    <svg
-                      viewBox={`0 0 ${world.width} ${world.height}`}
-                      aria-label="Overview of your full route"
-                      role="img"
-                    >
-                      {world.segments.map((s, i) => (
-                        <polyline
-                          key={i}
-                          points={s.map((p) => `${p.x},${p.y}`).join(' ')}
-                          fill="none"
-                          stroke="#b6c88d"
-                          strokeWidth="17"
-                          strokeLinejoin="round"
-                        />
-                      ))}
-                      {world.spots.map((p, i) => (
-                        <circle
-                          key={i}
-                          cx={p.x}
-                          cy={p.y}
-                          r={
-                            p.type === 'start' || p.type === 'finish' ? 25 : 16
-                          }
-                          fill={
-                            p.distance <= simulation.distance
-                              ? '#ecc576'
-                              : '#6b8556'
-                          }
-                        />
-                      ))}
-                    </svg>
-                    <span>YOUR TRAIL MAP</span>
-                  </div>
+                  <h2>On the trail.</h2>
                   <div className="journey-stat">
                     <span>
                       <Footprints size={16} /> Distance traveled
@@ -652,6 +510,16 @@ export default function App() {
                         ? '—'
                         : Math.round(world.processed.stats.ascent)}{' '}
                       <small>m</small>
+                    </strong>
+                  </div>
+                  <div className="journey-stat">
+                    <span>
+                      <Mountain size={16} /> Current elevation
+                    </span>
+                    <strong>
+                      {currentPosition?.elevation === undefined
+                        ? '—'
+                        : `${Math.round(currentPosition.elevation)} m`}
                     </strong>
                   </div>
                   <div className="waypoint-list">
@@ -692,10 +560,8 @@ export default function App() {
                     ))}
                   </div>
                   <p className="world-note">
-                    <Leaf size={14} />{' '}
-                    {geography?.features.length
-                      ? 'Real map positions; stylized assets. Unmapped areas remain illustrative.'
-                      : 'Procedural scenery, not a real map.'}
+                    <Leaf size={14} /> GPX elevation drives activity stats. Map
+                    terrain is a separate visual source.
                   </p>
                 </aside>
               </div>
@@ -716,17 +582,23 @@ export default function App() {
                   className="play-button"
                   disabled={simulation.status === 'Completed'}
                   onClick={() =>
-                    simulation.setStatus(
-                      simulation.status === 'Playing' ? 'Paused' : 'Playing',
-                    )
+                    simulation.status === 'Playing' ||
+                    simulation.status === 'Transitioning' ||
+                    simulation.status === 'Completing'
+                      ? simulation.pause()
+                      : simulation.begin()
                   }
                 >
-                  {simulation.status === 'Playing' ? (
+                  {simulation.status === 'Playing' ||
+                  simulation.status === 'Transitioning' ||
+                  simulation.status === 'Completing' ? (
                     <Pause size={17} />
                   ) : (
                     <Play size={17} />
                   )}{' '}
-                  {simulation.status === 'Playing'
+                  {simulation.status === 'Playing' ||
+                  simulation.status === 'Transitioning' ||
+                  simulation.status === 'Completing'
                     ? 'Pause'
                     : simulation.status === 'Paused'
                       ? 'Resume'
@@ -768,6 +640,22 @@ export default function App() {
                     value={progress}
                     max="100"
                   />
+                  <input
+                    className="timeline-scrubber"
+                    type="range"
+                    aria-label="Seek route timeline"
+                    min="0"
+                    max={world.duration}
+                    step={Math.max(0.01, world.duration / 1000)}
+                    value={Math.min(world.duration, simulation.elapsed)}
+                    disabled={
+                      simulation.status === 'Transitioning' ||
+                      simulation.status === 'Completing'
+                    }
+                    onChange={(event) =>
+                      simulation.seek(Number(event.target.value))
+                    }
+                  />
                 </div>
                 <div className="playback-end">
                   <span>⚑</span>
@@ -778,32 +666,18 @@ export default function App() {
                   </small>
                 </div>
               </section>
-              <AdventureStats
-                world={world}
-                geography={geography}
-                distance={simulation.distance}
-              />
-              {geography && (
-                <p className="attribution">
-                  Map data ©{' '}
-                  <a
-                    href="https://www.openstreetmap.org/copyright"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    OpenStreetMap contributors · ODbL
-                  </a>
-                  . Elevation:{' '}
-                  <a
-                    href="https://open-meteo.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open-Meteo · Copernicus GLO-90 · CC BY 4.0
-                  </a>
-                  . Pixel sprites are original Trailbound artwork.
-                </p>
-              )}
+              <div className="summary-actions">
+                <Button
+                  variant="outline"
+                  onClick={simulation.showSummary}
+                  disabled={simulation.status === 'Completed'}
+                >
+                  {simulation.status === 'Completing'
+                    ? 'Skip transition'
+                    : 'View journey summary'}
+                </Button>
+              </div>
+              <AdventureStats world={world} distance={simulation.distance} />
             </div>
           )
         )}
@@ -816,7 +690,7 @@ export default function App() {
           A little less scrolling. A little more exploring. <Leaf size={13} />
         </span>
         <span>
-          FRONTEND ONLY <span className="footer-dot">◆</span> MVP 1.1
+          FRONTEND ONLY <span className="footer-dot">◆</span> 3D JOURNEY 1.3
         </span>
       </footer>
       {help && (
@@ -840,8 +714,8 @@ export default function App() {
             >
               <X size={20} />
             </Button>
-            <div className="eyebrow">YOUR NEXT LITTLE ADVENTURE</div>
-            <h2 id="help-title">From trail to tiny world.</h2>
+            <div className="eyebrow">YOUR ROUTE, ON THE MAP</div>
+            <h2 id="help-title">From GPX to real terrain.</h2>
             <p>Export a GPX file from your activity app, then:</p>
             <ol>
               <li>
@@ -854,17 +728,17 @@ export default function App() {
               <li>
                 <Trees size={18} />
                 <span>
-                  <strong>Grow your world</strong>Keep local scenery, or opt in
-                  to map bounds and DEM grid requests. Real features use
-                  OpenStreetMap; missing data uses a labeled fallback.
+                  <strong>Preview the route</strong>Map tiles receive requests
+                  for the area shown. GPX processing and activity statistics
+                  stay in this browser.
                 </span>
               </li>
               <li>
                 <Play size={18} />
                 <span>
-                  <strong>Relive the journey</strong>Play, pause, restart, or
-                  change speed. Rest areas pause briefly; after two laps,
-                  repeated loops speed up. Real activity statistics stay intact.
+                  <strong>Follow the journey</strong>Play, pause, seek, restart,
+                  or change speed. Route gaps and GPX-derived statistics stay
+                  intact.
                 </span>
               </li>
             </ol>

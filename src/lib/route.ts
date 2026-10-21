@@ -1,4 +1,5 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
+import { clamp, angleDelta, motionProfile } from './motion';
 import { analyzeRoute, type ProcessedRoute } from './analysis';
 export type GPSPoint = {
   lat: number;
@@ -11,6 +12,8 @@ export type Point = {
   y: number;
   distance: number;
   elevation?: number;
+  sourceIndex?: number;
+  sourceSegment?: number;
 };
 export type Activity = {
   name: string;
@@ -225,7 +228,7 @@ export function createWorld(activity: Activity): World {
     distance = 0;
   // shortcut: local projection suits activity-scale routes; use a global projection for transcontinental tracks.
   const cos = Math.max(0.001, Math.cos(radians(first.lat)));
-  const projected = processed.segments.map((segment) => {
+  const projected = processed.segments.map((segment, sourceSegment) => {
     let longitude = first.lon;
     return segment.map((p, i) => {
       longitude += ((p.lon - longitude + 540) % 360) - 180;
@@ -236,7 +239,14 @@ export function createWorld(activity: Activity): World {
       minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
       if (i) distance += meters(segment[i - 1], p);
-      return { x, y, distance: p.distance, elevation: p.elevation };
+      return {
+        x,
+        y,
+        distance: p.distance,
+        elevation: p.elevation,
+        sourceIndex: p.sourceIndex,
+        sourceSegment,
+      };
     });
   });
   const scale = 1400 / Math.max(maxX - minX, maxY - minY, 1);
@@ -409,6 +419,42 @@ export function createWorld(activity: Activity): World {
       i++;
     }
   });
+  let turns = 0;
+  for (const segment of world.segments)
+    for (let i = 1; i < segment.length - 1; i++) {
+      const a = segment[i - 1],
+        b = segment[i],
+        c = segment[i + 1];
+      const before = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+      const after = (Math.atan2(c.y - b.y, c.x - b.x) * 180) / Math.PI;
+      turns += Math.min(1, Math.abs(angleDelta(before, after)) / 90);
+    }
+  const target = clamp(
+    15 +
+      Math.sqrt(world.distance) * 0.6 +
+      Math.sqrt(turns) * 3 +
+      Math.sqrt(processed.stats.ascent ?? 0) +
+      world.spots.length * 0.5 +
+      processed.movements.filter((m) => m.type === 'stay').length * 2,
+    motionProfile.minPlayback,
+    motionProfile.maxPlayback,
+  );
+  const stays = world.steps.filter((s) => s.type === 'stay').length;
+  const dwell = Math.min(2, (target / Math.max(1, stays)) * 0.25);
+  const movingDuration = world.steps
+    .filter((s) => s.type !== 'stay')
+    .reduce((sum, s) => sum + s.end - s.start, 0);
+  const factor = (target - stays * dwell) / (movingDuration || 1);
+  let cursor = 0;
+  for (const step of world.steps) {
+    const duration =
+      step.type === 'stay' ? dwell : (step.end - step.start) * factor;
+    step.start = cursor;
+    cursor += duration;
+    step.end = cursor;
+  }
+  world.steps.at(-1)!.end = target;
+  world.duration = target;
   return world;
 }
 export function positionAt(world: World, distance: number): Point {

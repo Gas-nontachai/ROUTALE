@@ -1,5 +1,4 @@
 import type { World } from '../lib/route';
-import type { Geography } from '../lib/geography';
 const value = (n: number | undefined, suffix = ' m') =>
   n === undefined
     ? 'Not available'
@@ -13,11 +12,9 @@ export function durationLabel(seconds: number | undefined) {
 }
 export function AdventureStats({
   world,
-  geography,
   distance,
 }: {
   world: World;
-  geography: Geography | null;
   distance: number;
 }) {
   const { stats, movements } = world.processed;
@@ -43,6 +40,13 @@ export function AdventureStats({
         {[
           ['Total distance', `${(stats.distance / 1000).toFixed(2)} km`],
           ['Recorded duration', durationLabel(stats.duration)],
+          ['Moving time', durationLabel(stats.movingTime)],
+          [
+            'Average speed',
+            stats.averageSpeed === undefined
+              ? 'Not available'
+              : `${(stats.averageSpeed * 3.6).toFixed(1)} km/h`,
+          ],
           ['Elevation gain', value(stats.ascent)],
           ['Elevation loss', value(stats.descent)],
           ['Lowest elevation', value(stats.minElevation)],
@@ -121,10 +125,8 @@ export function AdventureStats({
         </svg>
       ) : (
         <div className="no-elevation">
-          No GPX elevation recorded.{' '}
-          {geography?.terrain.length
-            ? 'The world uses DEM terrain; no DEM values are added to activity statistics.'
-            : 'Flat terrain is used until DEM is enabled.'}
+          No GPX elevation recorded. Map terrain is visual only and is never
+          added to activity statistics.
         </div>
       )}
       <div className="profile-scale">

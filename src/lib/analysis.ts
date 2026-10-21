@@ -12,6 +12,8 @@ export type Movement = {
 export type RouteStats = {
   distance: number;
   duration?: number;
+  movingTime?: number;
+  averageSpeed?: number;
   ascent?: number;
   descent?: number;
   minElevation?: number;
@@ -289,12 +291,37 @@ export function analyzeRoute(activity: Activity): ProcessedRoute {
       descent += Math.max(0, a - b);
     }
   const movements = segments.flatMap((s, i) => detectMovement(s, i));
+  // Only complete, monotonic timestamp coverage supports moving time and average speed.
+  let movingTime = 0;
+  segments.forEach((segment, segmentIndex) => {
+    for (let i = 1; i < segment.length; i++) {
+      const dt = time(segment[i]) - time(segment[i - 1]);
+      const resting = movements.some(
+        (m) =>
+          m.type === 'stay' &&
+          m.segment === segmentIndex &&
+          i > m.startIndex &&
+          i <= m.endIndex,
+      );
+      if (
+        !resting &&
+        Number.isFinite(dt) &&
+        dt > 0 &&
+        meters(segment[i - 1], segment[i]) / dt >= 0.3
+      )
+        movingTime += dt;
+    }
+  });
+  const completeTime = timedEdges === edges && edges > 0;
   return {
     segments,
     movements,
     stats: {
       distance,
       duration: timedEdges ? duration : undefined,
+      movingTime: completeTime ? movingTime : undefined,
+      averageSpeed:
+        completeTime && duration > 0 ? distance / duration : undefined,
       ascent: elevationEdges ? ascent : undefined,
       descent: elevationEdges ? descent : undefined,
       minElevation: elevations.length

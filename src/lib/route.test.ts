@@ -100,6 +100,20 @@ describe('GPX import and route geometry', () => {
   });
 });
 describe('playback state', () => {
+  it('keeps intro transition separate from route playback and resumes its phase', () => {
+    const store = useSimulationStore;
+    store.getState().restart();
+    store.getState().begin();
+    expect(store.getState().status).toBe('Transitioning');
+    expect(store.getState().elapsed).toBe(0);
+    store.getState().pause();
+    expect(store.getState().status).toBe('Paused');
+    store.getState().begin();
+    expect(store.getState().status).toBe('Transitioning');
+    store.setState({ status: 'Playing' });
+    expect(store.getState().status).toBe('Playing');
+  });
+
   it('allows supported speed changes and preserves speed across restart', () => {
     const state = useSimulationStore.getState();
     state.setSpeed(4);
@@ -114,11 +128,12 @@ describe('playback state', () => {
     const store = useSimulationStore;
     store.getState().restart();
     store.getState().setStatus('Playing');
-    store.getState().update(50, 100);
+    store.getState().seek(50);
     store.getState().setStatus('Paused');
-    expect(store.getState().distance).toBe(50);
+    expect(store.getState().elapsed).toBe(50);
     store.getState().setStatus('Playing');
-    store.getState().update(100, 100, 1000, 2);
+    store.setState({ elapsed: 100, distance: 1000, waypoint: 2 });
+    store.getState().showSummary();
     expect(store.getState().status).toBe('Completed');
     expect(store.getState().waypoint).toBe(2);
     store.getState().restart();
