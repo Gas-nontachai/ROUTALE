@@ -18,6 +18,7 @@ export function AdventureStats({
   distance: number;
 }) {
   const { stats, movements } = world.processed;
+  const visibleMovements = movements.filter((m) => m.type !== 'stay');
   const min = stats.minElevation ?? 0,
     range = Math.max(1, (stats.maxElevation ?? min) - min);
   return (
@@ -33,7 +34,7 @@ export function AdventureStats({
         <p>
           Quality-filtered activity statistics.
           <br />
-          Rest and lap compression never change these numbers.
+          Playback compression never changes these numbers.
         </p>
       </div>
       <dl className="statistics-grid">
@@ -51,10 +52,6 @@ export function AdventureStats({
           ['Elevation loss', value(stats.descent)],
           ['Lowest elevation', value(stats.minElevation)],
           ['Track high point', value(stats.maxElevation)],
-          [
-            'Rest areas',
-            String(movements.filter((m) => m.type === 'stay').length),
-          ],
           [
             'Repeated loop groups',
             String(movements.filter((m) => m.type === 'loop').length),
@@ -147,15 +144,13 @@ export function AdventureStats({
           ? 'Elevation coverage is incomplete; missing values stay unknown.'
           : 'Elevation noise uses a local median filter.'}
       </p>
-      {movements.length > 0 && (
+      {visibleMovements.length > 0 && (
         <div className="movement-summary">
-          {movements.map((m, i) => (
+          {visibleMovements.map((m, i) => (
             <span key={i}>
-              {m.type === 'stay'
-                ? `Rest area · ${durationLabel(m.duration)} recorded → 2s replay`
-                : m.type === 'loop'
-                  ? `${m.loopCount} laps · first two at normal speed, remainder at 12×`
-                  : 'Backtracking · outward and return paths preserved'}
+              {m.type === 'loop'
+                ? `${m.loopCount} laps · first two at normal speed, remainder at 12×`
+                : 'Backtracking · outward and return paths preserved'}
             </span>
           ))}
         </div>

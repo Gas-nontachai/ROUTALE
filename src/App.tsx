@@ -370,7 +370,7 @@ export default function App() {
                   onClick={() => void loadDemo(true)}
                   disabled={status === 'loading'}
                 >
-                  Try the smart demo: 6 laps + a rest + a return hike ↗
+                  Try the smart demo: 6 laps + a return hike ↗
                 </button>
                 <div className="privacy">
                   <LockKeyhole size={14} />
@@ -438,18 +438,15 @@ export default function App() {
                   className={`status-badge ${simulation.status.toLowerCase()}`}
                 >
                   <span />
-                  {simulation.status === 'Playing' &&
-                  simulation.movement === 'stay'
-                    ? 'Resting'
-                    : simulation.status === 'Transitioning' ||
-                        simulation.status === 'Completing'
-                      ? simulation.status === 'Completing'
-                        ? 'Finishing journey'
-                        : 'Camera intro'
-                      : simulation.status === 'Playing' &&
-                          simulation.movement === 'loop'
-                        ? 'Fast laps'
-                        : simulation.status}
+                  {simulation.status === 'Transitioning' ||
+                  simulation.status === 'Completing'
+                    ? simulation.status === 'Completing'
+                      ? 'Finishing journey'
+                      : 'Camera handoff'
+                    : simulation.status === 'Playing' &&
+                        simulation.movement === 'loop'
+                      ? 'Fast laps'
+                      : simulation.status}
                 </div>
               </div>
               <div className="simulation-layout">
@@ -483,8 +480,8 @@ export default function App() {
                     </div>
                     {simulation.status === 'Ready' && (
                       <div className="ready-note">
-                        <Sparkles size={16} /> Route ready · press play to
-                        follow it.
+                        <Sparkles size={16} /> Explore freely · press play to
+                        follow the route.
                       </div>
                     )}
                   </div>
@@ -523,41 +520,42 @@ export default function App() {
                     </strong>
                   </div>
                   <div className="waypoint-list">
-                    {world.spots.map((p, i) => (
-                      <div
-                        key={i}
-                        className={
-                          p.distance <= simulation.distance ? 'reached' : ''
-                        }
-                      >
-                        <span>
-                          {p.distance <= simulation.distance ? (
-                            <Check size={11} />
-                          ) : p.type === 'finish' ? (
-                            '⚑'
-                          ) : p.type === 'rest' ? (
-                            'z'
-                          ) : p.type === 'loop' ? (
-                            '↻'
-                          ) : (
-                            '▲'
-                          )}
-                        </span>
-                        <span>
-                          {p.label}
-                          {p.duration !== undefined && (
-                            <small> · {durationLabel(p.duration)}</small>
-                          )}
-                        </span>
-                        {i === simulation.waypoint && (
-                          <small>
-                            {simulation.status === 'Completed'
-                              ? 'ARRIVED'
-                              : 'HERE'}
-                          </small>
-                        )}
-                      </div>
-                    ))}
+                    {world.spots.map(
+                      (p, i) =>
+                        p.type !== 'rest' && (
+                          <div
+                            key={i}
+                            className={
+                              p.distance <= simulation.distance ? 'reached' : ''
+                            }
+                          >
+                            <span>
+                              {p.distance <= simulation.distance ? (
+                                <Check size={11} />
+                              ) : p.type === 'finish' ? (
+                                '⚑'
+                              ) : p.type === 'loop' ? (
+                                '↻'
+                              ) : (
+                                '▲'
+                              )}
+                            </span>
+                            <span>
+                              {p.label}
+                              {p.duration !== undefined && (
+                                <small> · {durationLabel(p.duration)}</small>
+                              )}
+                            </span>
+                            {i === simulation.waypoint && (
+                              <small>
+                                {simulation.status === 'Completed'
+                                  ? 'ARRIVED'
+                                  : 'HERE'}
+                              </small>
+                            )}
+                          </div>
+                        ),
+                    )}
                   </div>
                   <p className="world-note">
                     <Leaf size={14} /> GPX elevation drives activity stats. Map
@@ -625,13 +623,11 @@ export default function App() {
                     <span>
                       {simulation.status === 'Completed'
                         ? 'You made it. Welcome to the finish.'
-                        : simulation.movement === 'stay'
-                          ? 'Resting briefly · recorded rest time is preserved.'
-                          : simulation.movement === 'loop'
-                            ? 'Repeated laps · compressed playback.'
-                            : simulation.movement === 'backtracking'
-                              ? 'Following the return trail.'
-                              : 'A little closer to the finish.'}
+                        : simulation.movement === 'loop'
+                          ? 'Repeated laps · compressed playback.'
+                          : simulation.movement === 'backtracking'
+                            ? 'Following the return trail.'
+                            : 'A little closer to the finish.'}
                     </span>
                     <strong>{progress.toFixed(0)}%</strong>
                   </div>

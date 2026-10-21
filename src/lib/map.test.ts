@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bearing, routeCoordinates, visibleRoute } from './map';
+import { bearing, routeCoordinates, visibleRoute, travelerFacing } from './map';
 import { createWorld, parseGpx } from './route';
 
 const point = (lat: number, lon: number) =>
@@ -37,5 +37,21 @@ describe('MapLibre route data', () => {
     expect(
       bearing({ lat: 0, lon: 179.99 }, { lat: 0.01, lon: -179.99 }),
     ).toBeCloseTo(63.4, 0);
+  });
+});
+
+describe('upright traveler directions', () => {
+  it('faces four screen directions relative to camera bearing, including wraparound', () => {
+    expect(
+      [0, 90, 180, 270].map((heading) => travelerFacing(heading, 0)),
+    ).toEqual(['back', 'right', 'front', 'left']);
+    expect(
+      [0, 90, 180, 270].map((heading) => travelerFacing(heading, 90)),
+    ).toEqual(['left', 'back', 'right', 'front']);
+    expect(travelerFacing(-1, 0)).toBe('back');
+    expect(travelerFacing(719, 360)).toBe('back');
+    expect(travelerFacing(44.9, 0)).toBe('back');
+    expect(travelerFacing(45, 0)).toBe('right');
+    expect(travelerFacing(315, 0)).toBe('back');
   });
 });

@@ -7,15 +7,15 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { buildJourney } from '../lib/journey';
+import { cameraOwner } from '../lib/camera';
 import { motionProfile } from '../lib/motion';
 import {
   configureTerrain,
   drawnTerrainElevation,
   terrainProfile,
 } from '../lib/terrain';
-import { projectGeo, unproject } from '../lib/route';
-import { routeCoordinates, visibleRoute } from '../lib/map';
+import { unproject } from '../lib/route';
+import { routeCoordinates, visibleRoute, travelerFacing } from '../lib/map';
 import type { JourneyEngine } from '../hooks/useJourney';
 import { useSimulationStore } from '../stores';
 maplibregl.setWorkerUrl(workerUrl);
@@ -82,17 +82,76 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       return;
     }
     mapRef.current = map;
+    let owner = 'user';
+    const setOwnership = (next: string) => {
+      owner = next;
+      const free = next === 'user';
+      if (!free) map.setCenterClampedToGround(false);
+      for (const handler of [
+        map.dragPan,
+        map.dragRotate,
+        map.scrollZoom,
+        map.touchZoomRotate,
+        map.touchPitch,
+        map.boxZoom,
+        map.doubleClickZoom,
+        map.keyboard,
+      ]) {
+        if (free) handler.enable();
+        else handler.disable();
+      }
+      for (const group of map
+        .getContainer()
+        .querySelectorAll<HTMLElement>('.maplibregl-ctrl-group'))
+        group.inert = !free;
+    };
+    // Releasing ownership preserves the exact view; terrain clamping resumes with the next user gesture.
+    const userInput = () => {
+      if (owner === 'user') map.setCenterClampedToGround(true);
+    };
+    const inputEvents = [
+      'pointerdown',
+      'touchstart',
+      'wheel',
+      'keydown',
+    ] as const;
+    for (const event of inputEvents)
+      map
+        .getContainer()
+        .addEventListener(event, userInput, { capture: true, passive: true });
+    const disconnect = engine.connect({
+      read: () => {
+        const center = map.getCenter();
+        return {
+          center: [center.lng, center.lat],
+          zoom: map.getZoom(),
+          bearing: map.getBearing(),
+          pitch: map.getPitch(),
+          elevation: map.getCenterElevation(),
+        };
+      },
+      stop: () => {
+        setOwnership('timeline');
+        map.stop();
+      },
+      environment: () => ({
+        enabled: terrainEnabled.current,
+        sample: (center) => drawnTerrainElevation(map, center),
+        height: map.getCanvas().clientHeight,
+        fov: map.getVerticalFieldOfView(),
+      }),
+    });
     const element = document.createElement('div');
     element.className = 'route-character-marker';
     element.setAttribute('role', 'img');
     element.setAttribute('aria-label', 'Traveler on the route');
     element.innerHTML =
-      '<svg class="traveler" viewBox="0 0 28 38" width="28" height="38" aria-hidden="true"><circle cx="14" cy="7" r="5" fill="#ffe2ad"/><path d="M9 14h10l2 13H7z" fill="#f4bb4b"/><path d="M8 16l-5 9m17-9 5 9" stroke="#ffe2ad" stroke-width="4" stroke-linecap="round"/><path class="left-leg" d="M10 26v9" stroke="#173b32" stroke-width="5" stroke-linecap="round"/><path class="right-leg" d="M18 26v9" stroke="#173b32" stroke-width="5" stroke-linecap="round"/></svg>';
+      '<svg class="traveler" viewBox="0 0 28 38" width="28" height="38" aria-hidden="true"><circle cx="14" cy="7" r="5" fill="#ffe2ad"/><path d="M9 14h10l2 13H7z" fill="#f4bb4b"/><path d="M8 16l-5 9m17-9 5 9" stroke="#ffe2ad" stroke-width="4" stroke-linecap="round"/><path class="left-leg" d="M10 26v9" stroke="#173b32" stroke-width="5" stroke-linecap="round"/><path class="right-leg" d="M18 26v9" stroke="#173b32" stroke-width="5" stroke-linecap="round"/><g class="front-face" fill="#173b32"><circle cx="12" cy="7" r="0.9"/><circle cx="16" cy="7" r="0.9"/></g><g class="side-face"><path d="M18 6l4 3h-4z" fill="#ffe2ad"/><circle cx="17" cy="6" r="0.9" fill="#173b32"/></g><g class="back-view"><path d="M9 4q5-5 10 0v4H9z" fill="#543e2c"/><rect x="9" y="15" width="10" height="11" rx="2" fill="#587b64" stroke="#173b32" stroke-width="1.5"/></g></svg>';
     const character = new maplibregl.Marker({
       element,
       anchor: 'bottom',
       subpixelPositioning: true,
-      rotationAlignment: 'map',
+      rotationAlignment: 'viewport',
       pitchAlignment: 'viewport',
     })
       .setLngLat(engine.frame.camera.center)
@@ -117,8 +176,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         configureTerrain(map, enabled, factor, terrainMaxZoom);
         terrainState = enabled ? 'loading' : 'off';
         setMessage(enabled ? 'Loading terrain DEM…' : 'Terrain off · 2D map');
-        if (useSimulationStore.getState().status === 'Ready')
-          map.setPitch(enabled ? motionProfile.obliquePitch : 0);
+        if (!enabled) map.setPitch(0);
         if (enabled)
           terrainTimeout = setTimeout(
             () => failTerrain('Terrain DEM did not become available'),
@@ -176,17 +234,19 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
-            features: world.spots.map((spot) => ({
-              type: 'Feature' as const,
-              properties: { kind: spot.type, label: spot.label },
-              geometry: {
-                type: 'Point' as const,
-                coordinates: (() => {
-                  const position = unproject(world, spot.x, spot.y);
-                  return [position.lon, position.lat];
-                })(),
-              },
-            })),
+            features: world.spots
+              .filter((spot) => spot.type !== 'rest')
+              .map((spot) => ({
+                type: 'Feature' as const,
+                properties: { kind: spot.type, label: spot.label },
+                geometry: {
+                  type: 'Point' as const,
+                  coordinates: (() => {
+                    const position = unproject(world, spot.x, spot.y);
+                    return [position.lon, position.lat];
+                  })(),
+                },
+              })),
           },
         });
       if (!map.getLayer('route-outline'))
@@ -241,8 +301,6 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               '#347a5b',
               'finish',
               '#ca543c',
-              'rest',
-              '#5579a4',
               'loop',
               '#a06cbd',
               '#db9c35',
@@ -257,23 +315,23 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       fallbackStarted = false,
       lastDistance = -1;
     const render = (frame: JourneyEngine['frame']) => {
+      if (owner !== frame.owner) setOwnership(frame.owner);
       if (!loaded) return;
       const position = unproject(world, frame.position.x, frame.position.y);
-      character
-        .setLngLat([position.lon, position.lat])
-        .setRotation(frame.direction);
+      character.setLngLat([position.lon, position.lat]);
       element.style.setProperty(
         '--stride',
         `${Math.sin(frame.elapsed * 12) * (frame.position.movement === 'stay' || frame.completionProgress > 0 || engine.journey.reducedMotion ? 0 : 2)}px`,
       );
-      const state = useSimulationStore.getState();
-      if (state.status !== 'Ready')
+      if (frame.owner === 'timeline')
         map.jumpTo({
           center: frame.camera.center,
           zoom: frame.camera.zoom,
           bearing: frame.camera.bearing,
           pitch: terrainEnabled.current ? frame.camera.pitch : 0,
+          elevation: terrainEnabled.current ? frame.camera.elevation : 0,
         });
+      updateFacing();
       const route = map.getSource('travelled-route') as
         GeoJSONSource | undefined;
       if (
@@ -294,6 +352,13 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         lastDistance = frame.position.distance;
       }
     };
+    const updateFacing = () => {
+      element.dataset.facing = travelerFacing(
+        engine.frame.direction,
+        map.getBearing(),
+      );
+    };
+    map.on('rotate', updateFacing);
     map.on('style.load', () => {
       installRoute();
       loaded = true;
@@ -330,29 +395,6 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         );
       }
     });
-    map.on('moveend', (event) => {
-      // DEM loading and programmatic resets must not rewrite the prepared overview.
-      if (
-        useSimulationStore.getState().status !== 'Ready' ||
-        !event.originalEvent
-      )
-        return;
-      const point = projectGeo(world, {
-        lat: map.getCenter().lat,
-        lon: map.getCenter().lng,
-      });
-      Object.assign(
-        engine.journey,
-        buildJourney(world, engine.journey.reducedMotion, {
-          x: point.x,
-          y: point.y,
-          bearing: map.getBearing(),
-          pitch: map.getPitch(),
-          zoom: map.getZoom(),
-          mode: 'Wide',
-        }),
-      );
-    });
     const timeout = window.setTimeout(() => {
       if (!loaded)
         setMessage(
@@ -360,54 +402,19 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         );
     }, 15000);
     const unsubscribe = engine.subscribe(render);
-    const unsubscribeState = useSimulationStore.subscribe((state, previous) => {
-      if (state.resetToken !== previous.resetToken) {
-        const view = engine.journey.overview;
-        const geo = unproject(world, view.x, view.y);
-        map.stop();
-        map.jumpTo({
-          center: [geo.lon, geo.lat],
-          zoom: view.zoom,
-          bearing: view.bearing,
-          pitch: terrainEnabled.current ? view.pitch : 0,
-        });
-      }
-    });
     return () => {
       clearTimeout(timeout);
       clearTimeout(terrainTimeout);
       configureTerrainRef.current = () => {};
       unsubscribe();
-      unsubscribeState();
+      disconnect();
+      for (const event of inputEvents)
+        map.getContainer().removeEventListener(event, userInput, true);
       character.remove();
       map.remove();
       mapRef.current = null;
     };
   }, [engine, world]);
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    for (const button of map
-      .getContainer()
-      .querySelectorAll<HTMLButtonElement>('.maplibregl-ctrl-group button'))
-      button.disabled = status !== 'Ready';
-    for (const group of map
-      .getContainer()
-      .querySelectorAll<HTMLElement>('.maplibregl-ctrl-group'))
-      group.inert = status !== 'Ready';
-    // Playback owns the camera; gestures only control the route preview.
-    for (const handler of [
-      map.dragPan,
-      map.dragRotate,
-      map.scrollZoom,
-      map.touchZoomRotate,
-      map.doubleClickZoom,
-      map.keyboard,
-    ]) {
-      if (status === 'Ready') handler.enable();
-      else handler.disable();
-    }
-  }, [status, ready]);
   return (
     <div
       className="route-map"
@@ -424,7 +431,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           <input
             type="checkbox"
             checked={terrain}
-            disabled={!ready || status !== 'Ready'}
+            disabled={!ready || cameraOwner(status) !== 'user'}
             onChange={(event) => {
               const enabled = event.target.checked,
                 map = mapRef.current;
@@ -441,7 +448,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           <select
             aria-label="Terrain exaggeration"
             value={exaggeration}
-            disabled={!ready || !terrain || status !== 'Ready'}
+            disabled={!ready || !terrain || cameraOwner(status) !== 'user'}
             onChange={(event) => {
               const factor = Number(event.target.value);
               if (

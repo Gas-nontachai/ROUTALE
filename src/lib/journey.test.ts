@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import smartDemo from '../../public/Smart_Route.gpx?raw';
 import hike from '../../public/Lunch_Hike.gpx?raw';
 import alpine from './fixtures/alpine-terrain.gpx?raw';
-import { buildJourney, evaluateJourney, JourneyClock } from './journey';
+import { buildJourney, evaluateJourney } from './journey';
 import { createWorld, parseGpx } from './route';
 import { angleDelta, motionProfile, smoothstep, smootherstep } from './motion';
 
@@ -40,6 +40,22 @@ describe('single deterministic journey timeline', () => {
       expect(evaluateJourney(reduced, 5).camera.pitch).toBe(60);
     }
   });
+  it('holds zoom throughout every rest instead of zooming out and back in', () => {
+    const rests = world.steps.filter((step) => step.type === 'stay');
+    expect(rests.length).toBeGreaterThan(0);
+    for (const rest of rests) {
+      const indices = journey.cameras.flatMap((_, i) =>
+        i / motionProfile.sampleRate >= rest.start &&
+        i / motionProfile.sampleRate < rest.end
+          ? [i]
+          : [],
+      );
+      for (const i of indices) {
+        if (i)
+          expect(journey.cameras[i].zoom).toBe(journey.cameras[i - 1].zoom);
+      }
+    }
+  });
   it('uses real map relief independently of absent GPX elevations and preserves playback coordinates', () => {
     const route = createWorld(parseGpx(alpine));
     const timeline = buildJourney(route);
@@ -51,21 +67,6 @@ describe('single deterministic journey timeline', () => {
     expect(finish.position.y).toBeCloseTo(route.segments.at(-1)!.at(-1)!.y);
     expect(finish.position.elevation).toBeUndefined();
     expect(finish.routeProgress).toBeCloseTo(1);
-  });
-  it('uses wall time, holds on pause, resumes without a jump, and resets its anchor on seek', () => {
-    const clock = new JourneyClock();
-    clock.advance(100, true, 1, 100);
-    clock.advance(1100, true, 1, 100);
-    expect(clock.time).toBe(1);
-    clock.advance(1100, false, 1, 100);
-    clock.advance(8000, false, 1, 100);
-    clock.advance(9000, true, 1, 100);
-    expect(clock.time).toBe(1);
-    clock.advance(9500, true, 2, 100);
-    expect(clock.time).toBe(2);
-    clock.seek(0);
-    clock.advance(10000, true, 1, 100);
-    expect(clock.time).toBe(0);
   });
   it('settles at the finish with a complementary crossfade and no finish spin', () => {
     const end = journey.intro + world.duration;

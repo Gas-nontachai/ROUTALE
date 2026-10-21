@@ -51,20 +51,21 @@ export const useWorldStore = create<{
     set({ exaggeration: Math.max(0, Math.min(2, exaggeration)) }),
   generation: (status, stage) => set({ status, stage }),
 }));
-export type Playback =
-  'Ready' | 'Transitioning' | 'Playing' | 'Paused' | 'Completing' | 'Completed';
+export type { Playback } from '../lib/playback';
+import type { Playback } from '../lib/playback';
 export const useSimulationStore = create<{
   status: Playback;
-  pausedFrom: 'Transitioning' | 'Playing' | 'Completing';
   elapsed: number;
   distance: number;
   waypoint: number;
   speed: number;
   movement: AnimationStep['type'];
   completion: number;
+  transitionProgress: number;
   resetToken: number;
   seekToken: number;
-  setStatus: (status: Playback) => void;
+  command: 'begin' | 'pause' | 'summary' | null;
+  commandToken: number;
   begin: () => void;
   pause: () => void;
   setSpeed: (speed: number) => void;
@@ -73,30 +74,27 @@ export const useSimulationStore = create<{
   restart: () => void;
 }>((set) => ({
   status: 'Ready',
-  pausedFrom: 'Playing',
   elapsed: 0,
   distance: 0,
   waypoint: 0,
   speed: 1,
   movement: 'normal',
   completion: 0,
+  transitionProgress: 0,
   resetToken: 0,
   seekToken: 0,
-  setStatus: (status) => set({ status }),
+  command: null,
+  commandToken: 0,
   begin: () =>
     set((state) =>
-      state.status === 'Ready'
-        ? { status: 'Transitioning' }
-        : state.status === 'Paused'
-          ? { status: state.pausedFrom }
-          : {},
+      state.status === 'Ready' || state.status === 'Paused'
+        ? { command: 'begin', commandToken: state.commandToken + 1 }
+        : {},
     ),
   pause: () =>
     set((state) =>
-      state.status === 'Playing' ||
-      state.status === 'Transitioning' ||
-      state.status === 'Completing'
-        ? { status: 'Paused', pausedFrom: state.status }
+      ['Playing', 'Transitioning', 'Completing'].includes(state.status)
+        ? { command: 'pause', commandToken: state.commandToken + 1 }
         : {},
     ),
   setSpeed: (speed) => {
@@ -106,22 +104,24 @@ export const useSimulationStore = create<{
     if (Number.isFinite(elapsed))
       set((state) => ({
         elapsed: Math.max(0, elapsed),
-        completion: 0,
-        status: state.status === 'Playing' ? 'Playing' : 'Paused',
-        pausedFrom: 'Playing',
         seekToken: state.seekToken + 1,
       }));
   },
-  showSummary: () => set({ status: 'Completed', completion: 1 }),
+  showSummary: () =>
+    set((state) => ({
+      command: 'summary',
+      commandToken: state.commandToken + 1,
+    })),
   restart: () =>
     set((state) => ({
       status: 'Ready',
-      pausedFrom: 'Playing',
       elapsed: 0,
       distance: 0,
       waypoint: 0,
       movement: 'normal',
       completion: 0,
+      transitionProgress: 0,
+      command: null,
       resetToken: state.resetToken + 1,
     })),
 }));

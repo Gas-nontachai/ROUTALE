@@ -6,7 +6,6 @@ import {
   clamp,
   motionProfile as limits,
   smootherstep,
-  smoothstep,
 } from './motion';
 
 export type CameraMode = 'Follow' | 'Wide' | 'Side' | 'Top-down' | 'Scenic';
@@ -38,11 +37,7 @@ const mixCamera = (a: CameraFrame, b: CameraFrame, t: number): CameraFrame => ({
   mode: b.mode,
 });
 
-export function buildJourney(
-  world: World,
-  reducedMotion = false,
-  preview?: CameraFrame,
-): Journey {
+export function buildJourney(world: World, reducedMotion = false): Journey {
   const extent =
     Math.max(world.width - 400, world.height - 400) / world.projection.scale;
   const first = animationAt(world, 0);
@@ -66,7 +61,7 @@ export function buildJourney(
       unproject(world, first.x, first.y),
       unproject(world, reference.x, reference.y),
     ) - 35;
-  const overview: CameraFrame = preview ?? {
+  const overview: CameraFrame = {
     x: world.width / 2,
     y: world.height / 2,
     bearing: routeBearing,
@@ -94,24 +89,12 @@ export function buildJourney(
     zoom: Math.min(15, overview.zoom + (relief > 100 ? 1 : 1.5)),
     mode: 'Follow' as const,
   };
-  const move =
-    Math.hypot(first.x - overview.x, first.y - overview.y) /
-    world.projection.scale;
-  const required = Math.max(
-    limits.minTransition,
-    (1.875 * move) / speedLimit,
-    Math.sqrt((6 * move) / acceleration),
-    (1.875 * Math.abs(target.pitch - overview.pitch)) / limits.pitchSpeed,
-    (1.875 * Math.abs(target.zoom - overview.zoom)) / limits.zoomSpeed,
-  );
-  // shortcut: over-budget introductions keep the overview; following catches up within the motion budget.
-  const introTarget = required > limits.maxTransition ? overview : target;
-  const intro = reducedMotion ? 0 : Math.min(required, limits.maxTransition);
+  const intro = 0;
   const cameras: CameraFrame[] = [];
   const headings: number[] = [];
   const dt = 1 / limits.sampleRate;
-  let camera = { ...introTarget },
-    vx = 0,
+  let camera: CameraFrame = { ...target };
+  let vx = 0,
     vy = 0,
     angularVelocity = 0;
   const count = Math.ceil(world.duration * limits.sampleRate);
@@ -144,7 +127,9 @@ export function buildJourney(
       bearing: overview.bearing,
       pitch: limits.obliquePitch,
       zoom: clamp(
-        overview.zoom + (mode === 'Wide' ? 0 : mode === 'Scenic' ? 0.5 : 1.5),
+        mode === 'Wide'
+          ? camera.zoom
+          : overview.zoom + (mode === 'Scenic' ? 0.5 : 1.5),
         limits.minZoom,
         limits.maxZoom,
       ),
@@ -246,19 +231,6 @@ export function evaluateJourney(journey: Journey, time: number) {
     cameras[Math.min(index + 1, cameras.length - 1)],
     sample - index,
   );
-  if (time < intro) {
-    camera = mixCamera(overview, cameras[0], smoothstep(time / intro));
-    camera.pitch = lerp(
-      overview.pitch,
-      cameras[0].pitch,
-      smootherstep(time / intro),
-    );
-    camera.zoom = lerp(
-      overview.zoom,
-      cameras[0].zoom,
-      smootherstep(time / intro),
-    );
-  }
   const completionProgress =
     time >= intro + world.duration
       ? completion
@@ -296,23 +268,4 @@ export function evaluateJourney(journey: Journey, time: number) {
             ? ('Transitioning' as const)
             : ('Playing' as const),
   };
-}
-
-// The clock holds no renderer state: seeking and resuming evaluate exactly the same time.
-export class JourneyClock {
-  time = 0;
-  private anchor: number | null = null;
-  advance(now: number, playing: boolean, speed: number, total: number) {
-    if (playing && this.anchor !== null)
-      this.time = Math.min(
-        total,
-        this.time + (Math.max(0, now - this.anchor) / 1000) * speed,
-      );
-    this.anchor = playing ? now : null;
-    return this.time;
-  }
-  seek(time: number) {
-    this.time = time;
-    this.anchor = null;
-  }
 }

@@ -1834,3 +1834,21 @@ input:focus-visible {
     height: 110px;
   }
 }
+
+.traveler .side-face,
+.traveler .back-view {
+  display: none;
+}
+.route-character-marker[data-facing='back'] .front-face,
+.route-character-marker[data-facing='left'] .front-face,
+.route-character-marker[data-facing='right'] .front-face {
+  display: none;
+}
+.route-character-marker[data-facing='back'] .back-view,
+.route-character-marker[data-facing='left'] .side-face,
+.route-character-marker[data-facing='right'] .side-face {
+  display: initial;
+}
+.route-character-marker[data-facing='left'] .traveler {
+  transform: scaleX(-1);
+}

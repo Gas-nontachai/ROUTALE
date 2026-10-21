@@ -99,45 +99,16 @@ describe('GPX import and route geometry', () => {
     expect([r1(), r1()]).toEqual([r2(), r2()]);
   });
 });
-describe('playback state', () => {
-  it('keeps intro transition separate from route playback and resumes its phase', () => {
-    const store = useSimulationStore;
-    store.getState().restart();
-    store.getState().begin();
-    expect(store.getState().status).toBe('Transitioning');
-    expect(store.getState().elapsed).toBe(0);
-    store.getState().pause();
-    expect(store.getState().status).toBe('Paused');
-    store.getState().begin();
-    expect(store.getState().status).toBe('Transitioning');
-    store.setState({ status: 'Playing' });
-    expect(store.getState().status).toBe('Playing');
-  });
-
-  it('allows supported speed changes and preserves speed across restart', () => {
+describe('playback requests', () => {
+  it('allows supported speed changes and preserves speed across reset', () => {
     const state = useSimulationStore.getState();
     state.setSpeed(4);
     state.setSpeed(99);
     expect(useSimulationStore.getState().speed).toBe(4);
     state.restart();
     expect(useSimulationStore.getState().elapsed).toBe(0);
+    expect(useSimulationStore.getState().status).toBe('Ready');
     expect(useSimulationStore.getState().speed).toBe(4);
     state.setSpeed(1);
-  });
-  it('supports play, pause, completion and clean restart', () => {
-    const store = useSimulationStore;
-    store.getState().restart();
-    store.getState().setStatus('Playing');
-    store.getState().seek(50);
-    store.getState().setStatus('Paused');
-    expect(store.getState().elapsed).toBe(50);
-    store.getState().setStatus('Playing');
-    store.setState({ elapsed: 100, distance: 1000, waypoint: 2 });
-    store.getState().showSummary();
-    expect(store.getState().status).toBe('Completed');
-    expect(store.getState().waypoint).toBe(2);
-    store.getState().restart();
-    expect(store.getState().distance).toBe(0);
-    expect(store.getState().status).toBe('Ready');
   });
 });

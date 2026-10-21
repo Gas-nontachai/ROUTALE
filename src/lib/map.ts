@@ -51,3 +51,10 @@ export function bearing(from: GPSPoint, to: GPSPoint) {
     360
   );
 }
+
+export function travelerFacing(heading: number, mapBearing: number) {
+  const angle = (((heading - mapBearing) % 360) + 360) % 360;
+  return (['back', 'right', 'front', 'left'] as const)[
+    Math.floor((angle + 45) / 90) % 4
+  ];
+}
