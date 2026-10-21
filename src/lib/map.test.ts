@@ -7,6 +7,7 @@ import {
   travelerFacing,
 } from './map';
 import { createWorld, parseGpx, unproject } from './route';
+import { applyMapStyle, type BaseLayer, type MapStyle } from './mapStyles';
 
 const point = (lat: number, lon: number) =>
   `<trkpt lat="${lat}" lon="${lon}"/>`;
@@ -94,5 +95,34 @@ describe('upright traveler directions', () => {
     expect(travelerFacing(44.9, 0)).toBe('back');
     expect(travelerFacing(45, 0)).toBe('right');
     expect(travelerFacing(315, 0)).toBe('back');
+  });
+});
+
+describe('map style layers', () => {
+  const baseLayers: BaseLayer[] = [
+    { id: 'background', type: 'background', visibility: 'visible' },
+    { id: 'roads', type: 'line', visibility: 'visible' },
+    { id: 'labels', type: 'symbol', visibility: 'visible' },
+    { id: 'hidden', type: 'line', visibility: 'none' },
+  ];
+
+  it.each([
+    ['default', ['visible', 'visible', 'visible', 'none', 'none']],
+    ['satellite', ['none', 'none', 'none', 'none', 'visible']],
+    ['hybrid', ['none', 'visible', 'visible', 'none', 'visible']],
+  ] as const)('shows the expected layers for %s', (style, expected) => {
+    const visibility: Record<string, unknown> = {};
+    const map = {
+      setLayoutProperty: (id: string, property: string, value: unknown) => {
+        expect(property).toBe('visibility');
+        visibility[id] = value;
+      },
+    };
+    applyMapStyle(map, style as MapStyle, baseLayers);
+    expect(
+      baseLayers
+        .map((layer) => visibility[layer.id])
+        .concat(visibility['satellite-imagery']),
+    ).toEqual(expected);
   });
 });

@@ -22,7 +22,16 @@ import {
   travelerFacing,
 } from '../lib/map';
 import type { JourneyEngine } from '../hooks/useJourney';
-import { useSimulationStore } from '../stores';
+import { useSimulationStore, useMapStyleStore } from '../stores';
+import { Layers } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import {
+  applyMapStyle,
+  mapStyles,
+  satelliteSource,
+  type BaseLayer,
+  type MapStyle,
+} from '../lib/mapStyles';
 maplibregl.setWorkerUrl(workerUrl);
 const terrainMaxZoom = navigator.hardwareConcurrency <= 4 ? 10 : 12;
 const fallbackStyle: StyleSpecification = {
@@ -58,6 +67,12 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   const exaggerationRef = useRef(exaggeration);
   exaggerationRef.current = exaggeration;
   const status = useSimulationStore((state) => state.status);
+  const { style, setStyle } = useMapStyleStore();
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [styleLoading, setStyleLoading] = useState(false);
+  const [styleError, setStyleError] = useState('');
+  const layersButton = useRef<HTMLButtonElement>(null);
+  const canSwitchStyle = cameraOwner(status) === 'user';
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState(
     'Loading OpenFreeMap and Mapterhorn terrain…',
@@ -396,7 +411,62 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     let loaded = false,
       fallbackStarted = false,
       lastDistance = -1;
+    let baseLayers: BaseLayer[] = [];
+    let appliedStyle: MapStyle = 'default',
+      pendingStyle: MapStyle | null = null;
+    let styleTimeout: ReturnType<typeof setTimeout> | undefined;
+    const finishStyle = () => {
+      if (
+        !pendingStyle ||
+        (pendingStyle !== 'default' && !map.isSourceLoaded('satellite-imagery'))
+      )
+        return;
+      applyMapStyle(map, pendingStyle, baseLayers);
+      appliedStyle = pendingStyle;
+      pendingStyle = null;
+      clearTimeout(styleTimeout);
+      setStyleLoading(false);
+    };
+    const failStyle = (reason: string) => {
+      if (!pendingStyle) return;
+      pendingStyle = null;
+      clearTimeout(styleTimeout);
+      applyMapStyle(map, appliedStyle, baseLayers);
+      setStyleLoading(false);
+      useMapStyleStore.getState().setStyle(appliedStyle);
+      setStyleError(reason);
+    };
+    const requestStyle = (next: MapStyle) => {
+      if (!loaded || (next === appliedStyle && !pendingStyle)) return;
+      clearTimeout(styleTimeout);
+      pendingStyle = next;
+      setStyleError('');
+      if (next !== 'default')
+        map.setLayoutProperty('satellite-imagery', 'visibility', 'visible');
+      finishStyle();
+      if (pendingStyle) {
+        setStyleLoading(true);
+        styleTimeout = setTimeout(
+          () =>
+            failStyle(
+              'Satellite tiles are unavailable. The previous style is still active.',
+            ),
+          12000,
+        );
+      }
+    };
+    map.on('sourcedata', (event) => {
+      if (event.sourceId === 'satellite-imagery' && event.isSourceLoaded)
+        finishStyle();
+    });
+    const unsubscribeStyle = useMapStyleStore.subscribe((state, previous) => {
+      if (state.style !== previous.style) requestStyle(state.style);
+    });
     const render = (frame: JourneyEngine['frame']) => {
+      if (pendingStyle && frame.owner !== 'user')
+        failStyle(
+          'Style loading was canceled when playback started. Pause to try again.',
+        );
       const wasSummary = summaryActive;
       summaryActive = completionPresentation(frame.completionProgress).summary;
       if (owner !== frame.owner) setOwnership(frame.owner);
@@ -470,15 +540,39 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     };
     map.on('rotate', updateFacing);
     map.on('style.load', () => {
+      baseLayers = map.getStyle().layers.map((layer) => ({
+        id: layer.id,
+        type: layer.type,
+        visibility: layer.layout?.visibility === 'none' ? 'none' : 'visible',
+      }));
+      appliedStyle = 'default';
+      map.addSource('satellite-imagery', satelliteSource);
+      map.addLayer(
+        {
+          id: 'satellite-imagery',
+          type: 'raster',
+          source: 'satellite-imagery',
+          layout: { visibility: 'none' },
+          paint: { 'raster-fade-duration': 0 },
+        },
+        baseLayers.find((layer) => layer.type !== 'background')?.id,
+      );
       installRoute();
       loaded = true;
       setReady(true);
+      requestStyle(useMapStyleStore.getState().style);
       render(engine.frame);
       fitSummary();
     });
     map.on('error', (event) => {
       const sourceId = (event as maplibregl.ErrorEvent & { sourceId?: string })
         .sourceId;
+      if (sourceId === 'satellite-imagery') {
+        failStyle(
+          'Satellite tiles could not be loaded. The previous style is still active.',
+        );
+        return;
+      }
       if (
         sourceId === 'terrain-dem' ||
         (!sourceId && /mapterhorn|terrain/i.test(event.error.message))
@@ -514,6 +608,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     }, 15000);
     const unsubscribe = engine.subscribe(render);
     return () => {
+      unsubscribeStyle();
+      clearTimeout(styleTimeout);
       cancelAnimationFrame(summaryFrame);
       map.off('render', revealSummary);
       revealSummary();
@@ -545,7 +641,63 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           {message}
         </div>
       )}
+      {styleError && (
+        <p className="map-style-error" role="status">
+          {styleError}
+        </p>
+      )}
       <div className="map-toolbar" role="group" aria-label="Map settings">
+        <div
+          className="map-style-picker"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setLayersOpen(false);
+              layersButton.current?.focus();
+            }
+          }}
+        >
+          <Button
+            ref={layersButton}
+            variant="outline"
+            disabled={!ready || !canSwitchStyle || styleLoading}
+            aria-expanded={layersOpen && canSwitchStyle}
+            aria-controls="map-style-menu"
+            onClick={() => setLayersOpen(!layersOpen)}
+          >
+            <Layers size={15} aria-hidden="true" />{' '}
+            {styleLoading ? 'Loading…' : 'Layers'}
+          </Button>
+          {layersOpen && canSwitchStyle && (
+            <div
+              id="map-style-menu"
+              className="map-style-menu"
+              role="group"
+              aria-label="Map style"
+            >
+              {mapStyles.map((option) => (
+                <Button
+                  key={option}
+                  variant="ghost"
+                  aria-pressed={style === option}
+                  disabled={styleLoading}
+                  onClick={() => {
+                    if (cameraOwner(engine.state) !== 'user') return;
+                    setStyle(option);
+                    setLayersOpen(false);
+                    layersButton.current?.focus();
+                  }}
+                >
+                  <span
+                    className={`map-style-preview preview-${option}`}
+                    aria-hidden="true"
+                  />
+                  <span>{option[0].toUpperCase() + option.slice(1)}</span>
+                </Button>
+              ))}
+              <small>Satellite imagery · 2016</small>
+            </div>
+          )}
+        </div>
         <label className="terrain-toggle">
           <input
             type="checkbox"

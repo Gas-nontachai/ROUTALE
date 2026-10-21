@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { isMapStyle, type MapStyle } from '../lib/mapStyles';
 import type { Activity, AnimationStep, World } from '../lib/route';
 import type { ProcessedRoute } from '../lib/analysis';
 import type { Geography } from '../lib/geography';
@@ -125,3 +127,24 @@ export const useSimulationStore = create<{
       resetToken: state.resetToken + 1,
     })),
 }));
+
+export const useMapStyleStore = create<{
+  style: MapStyle;
+  setStyle: (style: MapStyle) => void;
+}>()(
+  persist(
+    (set) => ({
+      style: 'default',
+      setStyle: (style) => {
+        if (isMapStyle(style)) set({ style });
+      },
+    }),
+    {
+      name: 'gpx-map-style',
+      merge: (saved, current) => {
+        const style = (saved as { style?: unknown } | null)?.style;
+        return { ...current, style: isMapStyle(style) ? style : 'default' };
+      },
+    },
+  ),
+);

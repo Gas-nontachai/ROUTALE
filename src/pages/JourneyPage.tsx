@@ -9,7 +9,6 @@ import {
 import {
   ArrowLeft,
   Footprints,
-  MapPin,
   Mountain,
   Pause,
   Play,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
+import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
 import { JourneySummary } from '../components/JourneySummary';
 import { useGpxStore, useWorldStore, useSimulationStore } from '../stores';
 
@@ -80,9 +80,12 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       const view = completionPresentation(frame.completionProgress);
       if (map) {
         map.style.opacity = String(view.opacity);
+        map.style.visibility =
+          view.summary && view.opacity <= 0 ? 'hidden' : 'visible';
         map.inert = view.summary;
       }
       if (summary) {
+        summary.style.pointerEvents = view.summary ? 'auto' : 'none';
         summary.style.opacity = String(view.summary ? view.opacity : 0);
         summary.style.transform = `translateY(${engine.journey.reducedMotion ? 0 : (1 - view.opacity) * 12}px)`;
         summary.style.visibility = view.summary ? 'visible' : 'hidden';
@@ -113,9 +116,19 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       : 0;
   const ascent = world.processed.stats.ascent;
 
+  const handleReplay = () => {
+    simulation.restart();
+    simulation.begin();
+  };
+
   const togglePlayback = () => {
-    if (isPlaying) simulation.pause();
-    else simulation.begin();
+    if (isCompleted) {
+      handleReplay();
+    } else if (isPlaying) {
+      simulation.pause();
+    } else {
+      simulation.begin();
+    }
   };
 
   return (
@@ -134,19 +147,23 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           >
             <ArrowLeft size={22} />
           </button>
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-extrabold tracking-tight !text-[#19392C] sm:text-3xl">
-              {activity.name}
-            </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs !text-[#52665C]">
+
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            {/* Activity name & type */}
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h1 className="min-w-0 truncate text-xl font-extrabold tracking-tight !text-[#19392C] sm:text-2xl">
+                {activity.name}
+              </h1>
+              <ActivityTypeBadge type={activity.type} />
+            </div>
+
+            {/* Activity stats */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs !text-[#52665C]">
               <span className="inline-flex items-center gap-1">
                 <Footprints size={14} />
                 {km(world.processed.stats.distance ?? activity.distance)}
               </span>
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={14} />
-                {activity.count.toLocaleString()} GPS points
-              </span>
+
               <span className="inline-flex items-center gap-1">
                 <Mountain size={14} />
                 {ascent === undefined ? '—' : `${Math.round(ascent)} m`} gain
@@ -157,20 +174,22 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         <button
           type="button"
           onClick={togglePlayback}
-          disabled={isCompleted}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 disabled:opacity-50"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
         >
-          {isPlaying ? (
+          {isCompleted ? (
+            <RotateCcw size={17} />
+          ) : isPlaying ? (
             <Pause size={17} />
           ) : (
             <Play size={17} fill="currentColor" />
           )}
-          {isPlaying
-            ? 'Pause'
-            : isReady
-              ? 'Start Simulation'
-              : isCompleted
-                ? 'Completed'
+
+          {isCompleted
+            ? 'Replay Simulation'
+            : isPlaying
+              ? 'Pause'
+              : isReady
+                ? 'Start Simulation'
                 : 'Resume Simulation'}
         </button>
       </header>
@@ -202,19 +221,11 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
           <div
             ref={summaryContainer}
-            className="invisible absolute inset-0 overflow-y-auto !bg-white opacity-0 transition-[opacity,transform] duration-300"
+            className="invisible absolute inset-0 z-20 overflow-y-auto bg-[#F7F8F3] opacity-0"
             aria-label="Journey summary"
             inert
           >
-            <JourneySummary
-              world={world}
-              name={activity.name}
-              activityType={activity.type}
-              replay={() => {
-                simulation.restart();
-                simulation.begin();
-              }}
-            />
+            <JourneySummary world={world} />
           </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
@@ -237,94 +248,98 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         </section>
       </div>
 
-      {/* Playback controls */}
-      <section
-        aria-label="Playback controls"
-        className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm sm:p-4"
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Play / Pause */}
-          <button
-            type="button"
-            onClick={togglePlayback}
-            disabled={isCompleted}
-            aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPlaying ? (
-              <Pause size={21} />
-            ) : (
-              <Play size={21} fill="currentColor" />
-            )}
-          </button>
-
-          {/* Time */}
-          <span className="shrink-0 text-sm font-medium tabular-nums">
-            {time(simulation.elapsed)} / {time(world.duration)}
-          </span>
-
-          {/* Speed toggle */}
-          <button
-            type="button"
-            aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
-            title="Change playback speed"
-            onClick={() => {
-              const speeds = [0.5, 1, 2, 4, 8];
-              const currentIndex = speeds.indexOf(simulation.speed);
-              const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-
-              simulation.setSpeed(nextSpeed);
-            }}
-            className="inline-flex h-9 min-w-14 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-[#F0F7F1] px-3 text-xs font-bold text-[#356B42] tabular-nums transition-colors hover:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] active:bg-[#D5E7D8]"
-          >
-            {simulation.speed}x
-          </button>
-
-          {/* Timeline + Progress */}
-          <div className="order-last flex w-full min-w-0 items-center gap-3 sm:order-none sm:w-auto sm:flex-1">
-            <input
-              type="range"
-              aria-label="Seek route timeline"
-              min={0}
-              max={world.duration}
-              step={Math.max(0.01, world.duration / 1000)}
-              value={Math.min(world.duration, simulation.elapsed)}
-              disabled={
-                simulation.status === 'Transitioning' ||
-                simulation.status === 'Completing'
-              }
-              onChange={(event) => simulation.seek(Number(event.target.value))}
-              className="h-2 w-full min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-
-            <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">
-              {progress.toFixed(0)}%
-            </span>
-          </div>
-
-          {/* Actions */}
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+      {/* Playback controls: do not show while the Summary View is active. */}
+      {!isCompleted && (
+        <section
+          aria-label="Playback controls"
+          className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm sm:p-4"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Play / Pause */}
             <button
               type="button"
-              aria-label="Restart adventure"
-              title="Restart adventure"
-              onClick={() => simulation.restart()}
-              className={control}
-            >
-              <RotateCcw size={17} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulation.showSummary()}
+              onClick={togglePlayback}
               disabled={isCompleted}
-              className={control}
+              aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Summary
+              {isPlaying ? (
+                <Pause size={21} />
+              ) : (
+                <Play size={21} fill="currentColor" />
+              )}
             </button>
+
+            {/* Time */}
+            <span className="shrink-0 text-sm font-medium tabular-nums">
+              {time(simulation.elapsed)} / {time(world.duration)}
+            </span>
+
+            {/* Speed toggle */}
+            <button
+              type="button"
+              aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
+              title="Change playback speed"
+              onClick={() => {
+                const speeds = [0.5, 1, 2, 4, 8];
+                const currentIndex = speeds.indexOf(simulation.speed);
+                const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+
+                simulation.setSpeed(nextSpeed);
+              }}
+              className="inline-flex h-9 min-w-14 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-[#F0F7F1] px-3 text-xs font-bold text-[#356B42] tabular-nums transition-colors hover:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] active:bg-[#D5E7D8]"
+            >
+              {simulation.speed}x
+            </button>
+
+            {/* Timeline + Progress */}
+            <div className="order-last flex w-full min-w-0 items-center gap-3 sm:order-none sm:w-auto sm:flex-1">
+              <input
+                type="range"
+                aria-label="Seek route timeline"
+                min={0}
+                max={world.duration}
+                step={Math.max(0.01, world.duration / 1000)}
+                value={Math.min(world.duration, simulation.elapsed)}
+                disabled={
+                  simulation.status === 'Transitioning' ||
+                  simulation.status === 'Completing'
+                }
+                onChange={(event) =>
+                  simulation.seek(Number(event.target.value))
+                }
+                className="h-2 w-full min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+
+              <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">
+                {progress.toFixed(0)}%
+              </span>
+            </div>
+
+            {/* Actions */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+              <button
+                type="button"
+                aria-label="Restart adventure"
+                title="Restart adventure"
+                onClick={() => simulation.restart()}
+                className={control}
+              >
+                <RotateCcw size={17} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => simulation.showSummary()}
+                disabled={isCompleted}
+                className={control}
+              >
+                Summary
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
