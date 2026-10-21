@@ -8,29 +8,37 @@ import {
 } from 'react';
 import {
   ArrowLeft,
-  Check,
   Footprints,
-  Leaf,
+  MapPin,
   Mountain,
   Pause,
   Play,
   RotateCcw,
-  Sparkles,
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { AdventureStats, durationLabel } from '../components/AdventureStats';
-import { animationAt } from '../lib/route';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
 import { JourneySummary } from '../components/JourneySummary';
 import { useGpxStore, useWorldStore, useSimulationStore } from '../stores';
 
-const km = (m: number) => `${(m / 1000).toFixed(2)} km`;
 const RouteMap = lazy(() =>
   import('../renderer/RouteMap').then(({ RouteMap }) => ({
     default: RouteMap,
   })),
 );
+
+const km = (meters: number) => `${(meters / 1000).toFixed(2)} km`;
+const time = (seconds: number) => {
+  const value = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(value / 3600);
+  const mins = Math.floor((value % 3600) / 60);
+  const secs = value % 60;
+  return hours > 0
+    ? `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
+const control =
+  'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700';
 
 class MapBoundary extends Component<
   { children: ReactNode },
@@ -42,9 +50,11 @@ class MapBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
-      <div className="map-loading" role="alert">
-        Map unavailable. Playback controls and your journey summary are still
-        available.
+      <div
+        role="alert"
+        className="grid h-full place-items-center bg-stone-100 p-6 text-center text-sm text-stone-600"
+      >
+        Map unavailable. Playback controls are still available.
       </div>
     ) : (
       this.props.children
@@ -59,16 +69,15 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
   const { world } = useWorldStore();
   const simulation = useSimulationStore();
   const engine = useJourney(world, true);
-
   const mapContainer = useRef<HTMLDivElement>(null);
   const summaryContainer = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!engine) return;
     return engine.subscribe((frame) => {
-      const map = mapContainer.current,
-        summary = summaryContainer.current;
+      const map = mapContainer.current;
+      const summary = summaryContainer.current;
       const view = completionPresentation(frame.completionProgress);
-      map?.parentElement?.classList.toggle('show-summary', view.summary);
       if (map) {
         map.style.opacity = String(view.opacity);
         map.inert = view.summary;
@@ -81,258 +90,241 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       }
     });
   }, [engine]);
+
   useEffect(() => {
-    if (simulation.status === 'Completed')
+    if (simulation.status === 'Completed') {
       summaryContainer.current
         ?.querySelector<HTMLElement>('h2')
         ?.focus({ preventScroll: true });
+    }
   }, [simulation.status]);
-  const progress = world
-    ? Math.min(100, (simulation.elapsed / world.duration) * 100)
-    : 0;
-  const currentPosition = world ? animationAt(world, simulation.elapsed) : null;
+
   if (!world || !activity || !engine) return null;
+
+  const isPlaying =
+    simulation.status === 'Playing' ||
+    simulation.status === 'Transitioning' ||
+    simulation.status === 'Completing';
+  const isCompleted = simulation.status === 'Completed';
+  const isReady = simulation.status === 'Ready';
+  const progress =
+    world.duration > 0
+      ? Math.min(100, Math.max(0, (simulation.elapsed / world.duration) * 100))
+      : 0;
+  const ascent = world.processed.stats.ascent;
+
+  const togglePlayback = () => {
+    if (isPlaying) simulation.pause();
+    else simulation.begin();
+  };
+
   return (
-    <div className="simulation-page">
-      <div className="simulation-heading">
-        <div>
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto !bg-[#F7F8F3] !text-[#20372F] lg:overflow-hidden">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
-            className="back-link"
+            type="button"
             onClick={() => {
               simulation.pause();
               onBack();
             }}
+            aria-label="Back to your trail"
+            title="Back to your trail"
+            className="grid size-9 shrink-0 place-items-center rounded-lg !text-[#244638] transition hover:!bg-[#E6EFE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#367047]"
           >
-            <ArrowLeft size={14} /> Back to your trail
+            <ArrowLeft size={22} />
           </button>
-          <h1>{activity.name}</h1>
-          <p>
-            {km(world?.processed.stats.distance ?? activity.distance)}{' '}
-            <span>·</span> {activity.count.toLocaleString()} GPS points{' '}
-            <span>·</span> 3D route simulation
-          </p>
-        </div>
-        <div className={`status-badge ${simulation.status.toLowerCase()}`}>
-          <span />
-          {simulation.status === 'Transitioning' ||
-          simulation.status === 'Completing'
-            ? simulation.status === 'Completing'
-              ? 'Finishing journey'
-              : 'Camera handoff'
-            : simulation.status === 'Playing' && simulation.movement === 'loop'
-              ? 'Fast laps'
-              : simulation.status}
-        </div>
-      </div>
-      <div className="simulation-layout">
-        <section className="world-panel">
-          <div className="simulation-canvas">
-            <div className="journey-map-layer" ref={mapContainer}>
-              <MapBoundary key={world.seed}>
-                <Suspense
-                  fallback={
-                    <div className="map-loading" role="status">
-                      Loading map engine…
-                    </div>
-                  }
-                >
-                  <RouteMap engine={engine} />
-                </Suspense>
-              </MapBoundary>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-extrabold tracking-tight !text-[#19392C] sm:text-3xl">
+              {activity.name}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs !text-[#52665C]">
+              <span className="inline-flex items-center gap-1">
+                <Footprints size={14} />
+                {km(world.processed.stats.distance ?? activity.distance)}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin size={14} />
+                {activity.count.toLocaleString()} GPS points
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Mountain size={14} />
+                {ascent === undefined ? '—' : `${Math.round(ascent)} m`} gain
+              </span>
             </div>
-            <div className="journey-summary-layer" ref={summaryContainer}>
-              <JourneySummary
-                world={world}
-                name={activity.name}
-                activityType={activity.type}
-                replay={() => {
-                  simulation.restart();
-                  simulation.begin();
-                }}
-              />
-            </div>
-            {simulation.status === 'Ready' && (
-              <div className="ready-note">
-                <Sparkles size={16} /> Explore freely · press play to follow the
-                route.
-              </div>
-            )}
           </div>
-        </section>
-        <aside className="journey-panel">
-          <div className="eyebrow">YOUR ADVENTURE</div>
-          <h2>On the trail.</h2>
-          <div className="journey-stat">
-            <span>
-              <Footprints size={16} /> Distance traveled
-            </span>
-            <strong>
-              {km(simulation.distance)} <small>/ {km(world.distance)}</small>
-            </strong>
-          </div>
-          <div className="journey-stat">
-            <span>
-              <Mountain size={16} /> Elevation gain
-            </span>
-            <strong>
-              {world.processed.stats.ascent === undefined
-                ? '—'
-                : Math.round(world.processed.stats.ascent)}{' '}
-              <small>m</small>
-            </strong>
-          </div>
-          <div className="journey-stat">
-            <span>
-              <Mountain size={16} /> Current elevation
-            </span>
-            <strong>
-              {currentPosition?.elevation === undefined
-                ? '—'
-                : `${Math.round(currentPosition.elevation)} m`}
-            </strong>
-          </div>
-          <div className="waypoint-list">
-            {world.spots.map(
-              (p, i) =>
-                p.type !== 'rest' && (
-                  <div
-                    key={i}
-                    className={
-                      p.distance <= simulation.distance ? 'reached' : ''
-                    }
-                  >
-                    <span>
-                      {p.distance <= simulation.distance ? (
-                        <Check size={11} />
-                      ) : p.type === 'finish' ? (
-                        '⚑'
-                      ) : p.type === 'loop' ? (
-                        '↻'
-                      ) : (
-                        '▲'
-                      )}
-                    </span>
-                    <span>
-                      {p.label}
-                      {p.duration !== undefined && (
-                        <small> · {durationLabel(p.duration)}</small>
-                      )}
-                    </span>
-                    {i === simulation.waypoint && (
-                      <small>
-                        {simulation.status === 'Completed' ? 'ARRIVED' : 'HERE'}
-                      </small>
-                    )}
-                  </div>
-                ),
-            )}
-          </div>
-          <p className="world-note">
-            <Leaf size={14} /> GPX elevation drives activity stats. Map terrain
-            is a separate visual source.
-          </p>
-        </aside>
-      </div>
-      <section className="playback-panel" aria-label="Playback controls">
-        <Button
-          size="icon"
-          variant="outline"
-          aria-label="Restart adventure"
-          title="Restart adventure"
-          onClick={simulation.restart}
+        </div>
+        <button
+          type="button"
+          onClick={togglePlayback}
+          disabled={isCompleted}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 disabled:opacity-50"
         >
-          <RotateCcw size={18} />
-        </Button>
-        <Button
-          className="play-button"
-          disabled={simulation.status === 'Completed'}
-          onClick={() =>
-            simulation.status === 'Playing' ||
-            simulation.status === 'Transitioning' ||
-            simulation.status === 'Completing'
-              ? simulation.pause()
-              : simulation.begin()
-          }
-        >
-          {simulation.status === 'Playing' ||
-          simulation.status === 'Transitioning' ||
-          simulation.status === 'Completing' ? (
+          {isPlaying ? (
             <Pause size={17} />
           ) : (
-            <Play size={17} />
-          )}{' '}
-          {simulation.status === 'Playing' ||
-          simulation.status === 'Transitioning' ||
-          simulation.status === 'Completing'
+            <Play size={17} fill="currentColor" />
+          )}
+          {isPlaying
             ? 'Pause'
-            : simulation.status === 'Paused'
-              ? 'Resume'
-              : 'Play'}
-        </Button>
-        <label className="speed-control">
-          Speed
-          <select
-            aria-label="Playback speed"
-            value={simulation.speed}
-            onChange={(e) => simulation.setSpeed(Number(e.target.value))}
+            : isReady
+              ? 'Start Simulation'
+              : isCompleted
+                ? 'Completed'
+                : 'Resume Simulation'}
+        </button>
+      </header>
+
+      {/* Fill the remaining viewport height with the map. */}
+      <div className="min-h-[360px] shrink-0 sm:min-h-[420px] lg:min-h-0 lg:flex-1">
+        <section
+          aria-label="3D journey map"
+          className="relative h-full min-h-[360px] min-w-0 overflow-hidden rounded-xl border border-[#DBE4D9] bg-[#E9EEE7] shadow-sm lg:min-h-0"
+        >
+          <div
+            ref={mapContainer}
+            className="absolute inset-0 transition-opacity duration-300"
           >
-            {[0.5, 1, 2, 4, 8].map((speed) => (
-              <option key={speed} value={speed}>
-                {speed}×
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="progress-area">
-          <div>
-            <span>
-              {simulation.status === 'Completed'
-                ? 'You made it. Welcome to the finish.'
-                : simulation.movement === 'loop'
-                  ? 'Repeated laps · compressed playback.'
-                  : simulation.movement === 'backtracking'
-                    ? 'Following the return trail.'
-                    : 'A little closer to the finish.'}
-            </span>
-            <strong>{progress.toFixed(0)}%</strong>
+            <MapBoundary key={world.seed}>
+              <Suspense
+                fallback={
+                  <div
+                    role="status"
+                    className="grid h-full place-items-center text-sm text-stone-600"
+                  >
+                    Loading map engine…
+                  </div>
+                }
+              >
+                <RouteMap engine={engine} />
+              </Suspense>
+            </MapBoundary>
           </div>
-          <progress aria-label="Route progress" value={progress} max="100" />
-          <input
-            className="timeline-scrubber"
-            type="range"
-            aria-label="Seek route timeline"
-            min="0"
-            max={world.duration}
-            step={Math.max(0.01, world.duration / 1000)}
-            value={Math.min(world.duration, simulation.elapsed)}
-            disabled={
-              simulation.status === 'Transitioning' ||
-              simulation.status === 'Completing'
-            }
-            onChange={(event) => simulation.seek(Number(event.target.value))}
-          />
-        </div>
-        <div className="playback-end">
-          <span>⚑</span>
-          <small>
-            THE FINISH
-            <br />
-            <strong>{km(world.distance)}</strong>
-          </small>
+          <div
+            ref={summaryContainer}
+            className="invisible absolute inset-0 overflow-y-auto !bg-white opacity-0 transition-[opacity,transform] duration-300"
+            aria-label="Journey summary"
+            inert
+          >
+            <JourneySummary
+              world={world}
+              name={activity.name}
+              activityType={activity.type}
+              replay={() => {
+                simulation.restart();
+                simulation.begin();
+              }}
+            />
+          </div>
+          {!isCompleted && (
+            <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
+              <div className="flex items-center gap-3 rounded-xl px-3 py-2 sm:px-4 sm:py-3">
+                <Footprints size={22} className="shrink-0 !text-[#356B42]" />
+                <div>
+                  <p className="text-[11px] font-medium !text-[#65776C]">
+                    Distance
+                  </p>
+                  <strong className="text-lg font-bold leading-tight !text-[#19392C] sm:text-xl">
+                    {km(simulation.distance)}
+                    <span className="ml-1 text-xs font-normal !text-[#65776C]">
+                      / {km(world.distance)}
+                    </span>
+                  </strong>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Playback controls */}
+      <section
+        aria-label="Playback controls"
+        className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm sm:p-4"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Play / Pause */}
+          <button
+            type="button"
+            onClick={togglePlayback}
+            disabled={isCompleted}
+            aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPlaying ? (
+              <Pause size={21} />
+            ) : (
+              <Play size={21} fill="currentColor" />
+            )}
+          </button>
+
+          {/* Time */}
+          <span className="shrink-0 text-sm font-medium tabular-nums">
+            {time(simulation.elapsed)} / {time(world.duration)}
+          </span>
+
+          {/* Speed toggle */}
+          <button
+            type="button"
+            aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
+            title="Change playback speed"
+            onClick={() => {
+              const speeds = [0.5, 1, 2, 4, 8];
+              const currentIndex = speeds.indexOf(simulation.speed);
+              const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+
+              simulation.setSpeed(nextSpeed);
+            }}
+            className="inline-flex h-9 min-w-14 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-[#F0F7F1] px-3 text-xs font-bold text-[#356B42] tabular-nums transition-colors hover:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] active:bg-[#D5E7D8]"
+          >
+            {simulation.speed}x
+          </button>
+
+          {/* Timeline + Progress */}
+          <div className="order-last flex w-full min-w-0 items-center gap-3 sm:order-none sm:w-auto sm:flex-1">
+            <input
+              type="range"
+              aria-label="Seek route timeline"
+              min={0}
+              max={world.duration}
+              step={Math.max(0.01, world.duration / 1000)}
+              value={Math.min(world.duration, simulation.elapsed)}
+              disabled={
+                simulation.status === 'Transitioning' ||
+                simulation.status === 'Completing'
+              }
+              onChange={(event) => simulation.seek(Number(event.target.value))}
+              className="h-2 w-full min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+
+            <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">
+              {progress.toFixed(0)}%
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+            <button
+              type="button"
+              aria-label="Restart adventure"
+              title="Restart adventure"
+              onClick={() => simulation.restart()}
+              className={control}
+            >
+              <RotateCcw size={17} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => simulation.showSummary()}
+              disabled={isCompleted}
+              className={control}
+            >
+              Summary
+            </button>
+          </div>
         </div>
       </section>
-      <div className="summary-actions">
-        <Button
-          variant="outline"
-          onClick={simulation.showSummary}
-          disabled={simulation.status === 'Completed'}
-        >
-          {simulation.status === 'Completing'
-            ? 'Skip transition'
-            : 'View journey summary'}
-        </Button>
-      </div>
-      <AdventureStats world={world} distance={simulation.distance} />
     </div>
   );
 }
