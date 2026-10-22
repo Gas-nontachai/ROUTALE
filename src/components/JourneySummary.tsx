@@ -125,18 +125,19 @@ export function JourneySummary({
       className="flex min-w-0 flex-col gap-5 bg-canvas p-4 sm:p-6"
       aria-label="Activity summary"
     >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="ui-eyebrow">The real journey</p>
-          <h2
-            tabIndex={-1}
-            className="break-words text-2xl font-bold text-foreground"
-          >
-            {activity?.name ?? 'Activity summary'}
-          </h2>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0">
+            <h2
+              tabIndex={-1}
+              className="break-words text-2xl font-bold text-foreground sm:text-3xl"
+            >
+              {activity?.name ?? 'Activity summary'}
+            </h2>
+          </div>
           <ActivityTypeBadge type={activity?.type} />
           {Number.isFinite(date) && (
-            <p className="mt-2 text-sm text-muted">
+            <p className="text-sm text-muted sm:mb-1 sm:ml-auto sm:whitespace-nowrap sm:text-base">
               {new Date(date).toLocaleString('en', {
                 dateStyle: 'medium',
                 timeStyle: 'short',
@@ -144,7 +145,11 @@ export function JourneySummary({
             </p>
           )}
         </div>
-        {onReplay && <Button onClick={onReplay}>Replay Adventure</Button>}
+        {onReplay && (
+          <Button className="self-start sm:self-auto" onClick={onReplay}>
+            Replay Adventure
+          </Button>
+        )}
       </header>
       <div className="order-2 border-b border-line pb-5 lg:order-none">
         <Metrics items={primary} primary />

@@ -25,7 +25,6 @@ import type { JourneyEngine } from '../hooks/useJourney';
 import { useSimulationStore, useMapStyleStore } from '../stores';
 import {
   Compass,
-  FileText,
   Layers,
   LocateFixed,
   Settings,
@@ -950,67 +949,6 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                     {styleError}
                   </small>
                 )}
-                <details className="border-t border-line pt-2.5">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 text-xs">
-                    <FileText size={15} /> Map Credits &amp; Licenses
-                  </summary>
-                  <small className="mt-2 block whitespace-normal text-xs leading-relaxed text-muted">
-                    <a
-                      className="underline"
-                      href="https://www.openstreetmap.org/copyright"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      © OpenStreetMap contributors
-                    </a>{' '}
-                    ·{' '}
-                    <a
-                      className="underline"
-                      href="https://openfreemap.org/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      © OpenFreeMap
-                    </a>{' '}
-                    ·{' '}
-                    <a
-                      className="underline"
-                      href="https://openmaptiles.org/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      © OpenMapTiles
-                    </a>{' '}
-                    ·{' '}
-                    <a
-                      className="underline"
-                      href="https://mapterhorn.com/attribution"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      © Mapterhorn
-                    </a>
-                    . Satellite imagery:{' '}
-                    <a
-                      className="underline"
-                      href="https://maps.eox.at/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      EOX Sentinel-2 cloudless 2016
-                    </a>
-                    ,{' '}
-                    <a
-                      className="underline"
-                      href="https://creativecommons.org/licenses/by/4.0/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      CC BY 4.0
-                    </a>
-                    .
-                  </small>
-                </details>
               </div>
             </section>
           )}

@@ -132,7 +132,7 @@ export function SummaryMap({ world }: { world: World }) {
   }, [coordinates]);
 
   return (
-    <div className="flex h-full min-h-[240px] w-full flex-col gap-1">
+    <div className="flex h-full min-h-[240px] w-full flex-col">
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface-muted">
         <div
           ref={elementRef}
@@ -152,23 +152,6 @@ export function SummaryMap({ world }: { world: World }) {
           </div>
         )}
       </div>
-      <p className="text-right text-xs text-muted">
-        <a href="https://openfreemap.org/" target="_blank" rel="noreferrer">
-          OpenFreeMap
-        </a>
-        {' · '}
-        <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">
-          © OpenMapTiles
-        </a>
-        {' · '}
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noreferrer"
-        >
-          © OpenStreetMap contributors
-        </a>
-      </p>
     </div>
   );
 }

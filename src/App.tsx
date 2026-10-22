@@ -46,7 +46,7 @@ export default function App() {
         )}
       </main>
 
-      <div className="shrink-0 max-lg:hidden">
+      <div className="shrink-0">
         <Footer />
       </div>
     </div>

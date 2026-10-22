@@ -29,7 +29,6 @@ export function AdventureStats({
     >
       <div className="statistics-heading">
         <div>
-          <div className="eyebrow">THE REAL JOURNEY</div>
           <h2>All the footsteps count.</h2>
         </div>
         <p>

@@ -6,14 +6,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import {
-  ChevronLeft,
-  Footprints,
-  Mountain,
-  Pause,
-  Play,
-  RotateCcw,
-} from 'lucide-react';
+import { ChevronLeft, Footprints, Mountain, Pause, Play } from 'lucide-react';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
 import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
@@ -108,12 +101,11 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
     simulation.status === 'Completing';
   const isCompleted = simulation.status === 'Completed';
   const isReady = simulation.status === 'Ready';
+  const ascent = world.processed.stats.ascent;
   const progress =
     world.duration > 0
       ? Math.min(100, Math.max(0, (simulation.elapsed / world.duration) * 100))
       : 0;
-  const ascent = world.processed.stats.ascent;
-
   const handleReplay = () => {
     simulation.restart();
     simulation.begin();
@@ -149,22 +141,18 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </Button>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3">
-            {/* Left: Activity name & type */}
             <div className="flex min-w-0 flex-wrap items-baseline gap-3">
               <h1 className="min-w-0 truncate text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl">
                 {activity.name}
               </h1>
-
               <ActivityTypeBadge type={activity.type} />
             </div>
 
-            {/* Right: Activity stats */}
             <div className="flex shrink-0 items-center gap-5 text-sm font-medium leading-none text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Footprints size={16} />
                 {km(world.processed.stats.distance ?? activity.distance)}
               </span>
-
               <span className="inline-flex items-center gap-1.5">
                 <Mountain size={16} />
                 {ascent === undefined ? '—' : `${Math.round(ascent)} m`} gain
@@ -172,18 +160,6 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             </div>
           </div>
         </div>
-        {isCompleted && (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={togglePlayback}
-            className="hidden shrink-0 sm:inline-flex"
-          >
-            <RotateCcw size={17} />
-            {'Replay'}
-          </Button>
-        )}
       </header>
 
       {/* Fill the remaining viewport height with the map. */}
