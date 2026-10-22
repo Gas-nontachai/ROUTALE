@@ -14,6 +14,10 @@ export const satelliteSource = {
   attribution:
     '<a href="https://maps.eox.at">EOX::Maps</a> · <a href="https://cloudless.eox.at">Sentinel-2 cloudless 2016 by EOX</a> (Contains modified Copernicus Sentinel data 2016) · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>',
 } satisfies StyleSpecification['sources'][string];
+export const mapStyleMaxZoom = (style: MapStyle, defaultMaxZoom: number) =>
+  style === 'default'
+    ? defaultMaxZoom
+    : Math.min(defaultMaxZoom, satelliteSource.maxzoom ?? 14);
 
 export type BaseLayer = {
   id: string;

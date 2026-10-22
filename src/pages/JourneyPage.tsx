@@ -221,7 +221,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
               <div className="flex items-center gap-3 rounded-xl px-3 py-2 sm:px-4 sm:py-3">
-                <Footprints size={22} className="shrink-0 !text-[#356B42]" />
+                <Footprints size={26} className="shrink-0" />
                 <div>
                   <p className="text-[11px] font-medium !text-[#65776C]">
                     Distance

@@ -23,10 +23,19 @@ import {
 } from '../lib/map';
 import type { JourneyEngine } from '../hooks/useJourney';
 import { useSimulationStore, useMapStyleStore } from '../stores';
-import { Layers } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import {
+  Compass,
+  FileText,
+  Layers,
+  LocateFixed,
+  Settings,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import {
   applyMapStyle,
+  mapStyleMaxZoom,
   mapStyles,
   satelliteSource,
   type BaseLayer,
@@ -68,10 +77,13 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   exaggerationRef.current = exaggeration;
   const status = useSimulationStore((state) => state.status);
   const { style, setStyle } = useMapStyleStore();
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
+  const [bearing, setBearing] = useState(0);
   const [styleLoading, setStyleLoading] = useState(false);
   const [styleError, setStyleError] = useState('');
   const layersButton = useRef<HTMLButtonElement>(null);
+  const controlsMenu = useRef<HTMLDivElement>(null);
   const canSwitchStyle = cameraOwner(status) === 'user';
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState(
@@ -79,6 +91,28 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   );
   const [terrain, setTerrain] = useState(true);
   const terrainEnabled = useRef(true);
+  useEffect(() => {
+    if (!controlsOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!controlsMenu.current?.contains(event.target as Node)) {
+        setLayersOpen(false);
+        setControlsOpen(false);
+      }
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setLayersOpen(false);
+        setControlsOpen(false);
+        layersButton.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [controlsOpen]);
   useEffect(() => {
     if (!host.current) return;
     let map: MapLibreMap;
@@ -231,8 +265,39 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     })
       .setLngLat(engine.frame.camera.center)
       .addTo(map);
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }));
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }));
+    map
+      .getContainer()
+      .querySelector('.maplibregl-ctrl-scale')
+      ?.classList.add(
+        '!mb-1',
+        '!relative',
+        '!border-x-0',
+        '!border-t-0',
+        '!border-b-2',
+        '!border-white',
+        '!bg-transparent',
+        '!px-0',
+        '!pb-1',
+        '!text-[11px]',
+        '!font-semibold',
+        '!text-white',
+        '[text-shadow:0_1px_3px_#142a20]',
+        'before:absolute',
+        'before:bottom-0',
+        'before:left-0',
+        'before:h-2',
+        'before:border-l-2',
+        'before:border-white',
+        "before:content-['']",
+        'after:absolute',
+        'after:bottom-0',
+        'after:right-0',
+        'after:h-2',
+        'after:border-r-2',
+        'after:border-white',
+        "after:content-['']",
+      );
     let terrainTimeout: ReturnType<typeof setTimeout> | undefined;
     let terrainState: 'loading' | 'ready' | 'off' | 'error' = 'loading';
     const failTerrain = (reason: string) => {
@@ -433,6 +498,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       pendingStyle = null;
       clearTimeout(styleTimeout);
       applyMapStyle(map, appliedStyle, baseLayers);
+      map.setMaxZoom(mapStyleMaxZoom(appliedStyle, motionProfile.maxZoom));
       setStyleLoading(false);
       useMapStyleStore.getState().setStyle(appliedStyle);
       setStyleError(reason);
@@ -441,6 +507,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       if (!loaded || (next === appliedStyle && !pendingStyle)) return;
       clearTimeout(styleTimeout);
       pendingStyle = next;
+      const maxZoom = mapStyleMaxZoom(next, motionProfile.maxZoom);
+      map.setMaxZoom(maxZoom);
+      if (map.getZoom() > maxZoom) map.easeTo({ zoom: maxZoom, duration: 500 });
       setStyleError('');
       if (next !== 'default')
         map.setLayoutProperty('satellite-imagery', 'visibility', 'visible');
@@ -540,6 +609,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       );
     };
     map.on('rotate', updateFacing);
+    const updateBearing = () => setBearing(map.getBearing());
+    map.on('rotate', updateBearing);
+    map.on('moveend', updateBearing);
     map.on('style.load', () => {
       baseLayers = map.getStyle().layers.map((layer) => ({
         id: layer.id,
@@ -613,6 +685,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       clearTimeout(styleTimeout);
       cancelAnimationFrame(summaryFrame);
       map.off('render', revealSummary);
+      map.off('rotate', updateBearing);
+      map.off('moveend', updateBearing);
       revealSummary();
       clearTimeout(timeout);
       clearTimeout(terrainTimeout);
@@ -647,100 +721,284 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           {styleError}
         </p>
       )}
-      <div className="map-toolbar" role="group" aria-label="Map settings">
+      <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-end sm:inset-x-3 sm:top-3">
         <div
-          className="map-style-picker"
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setLayersOpen(false);
-              layersButton.current?.focus();
-            }
+          ref={controlsMenu}
+          className={`pointer-events-auto relative flex h-10 items-center justify-end overflow-visible rounded-full border border-white/30 bg-[#18372fd9] text-white shadow-sm backdrop-blur-md transition-[width] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'w-[208px]' : 'w-10'}`}
+          onMouseEnter={() => setControlsOpen(true)}
+          onMouseLeave={() => {
+            setLayersOpen(false);
+            setControlsOpen(false);
           }}
         >
-          <Button
+          <button
             ref={layersButton}
-            variant="outline"
-            disabled={!ready || !canSwitchStyle || styleLoading}
-            aria-expanded={layersOpen && canSwitchStyle}
-            aria-controls="map-style-menu"
-            onClick={() => setLayersOpen(!layersOpen)}
+            type="button"
+            className={`group absolute right-0 grid size-10 shrink-0 place-items-center rounded-full transition-[opacity,transform] duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-amber-200 motion-reduce:transition-none ${controlsOpen ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'}`}
+            aria-label="Map settings and controls"
+            title="Map settings and controls"
+            aria-controls="map-controls-menu"
+            aria-expanded={controlsOpen}
+            onFocus={() => setControlsOpen(true)}
+            onClick={() => setControlsOpen(!controlsOpen)}
+            disabled={!ready}
           >
-            <Layers size={15} aria-hidden="true" />{' '}
-            {styleLoading ? 'Loading…' : 'Layers'}
-          </Button>
-          {layersOpen && canSwitchStyle && (
+            <Settings
+              className="transition-transform duration-200 ease-in-out group-hover:rotate-45"
+              size={19}
+            />
+          </button>
+          <div
+            id="map-controls-menu"
+            className={`flex min-w-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'w-full opacity-100' : 'pointer-events-none w-0 opacity-0'}`}
+            aria-hidden={!controlsOpen}
+            inert={!controlsOpen}
+          >
             <div
-              id="map-style-menu"
-              className="map-style-menu"
+              className="flex items-center justify-between gap-0"
               role="group"
-              aria-label="Map style"
+              aria-label="Map controls"
             >
-              {mapStyles.map((option) => (
-                <Button
-                  key={option}
-                  variant="ghost"
-                  aria-pressed={style === option}
-                  disabled={styleLoading}
-                  onClick={() => {
-                    if (cameraOwner(engine.state) !== 'user') return;
-                    setStyle(option);
-                    setLayersOpen(false);
-                    layersButton.current?.focus();
-                  }}
-                >
-                  <span
-                    className={`map-style-preview preview-${option}`}
-                    aria-hidden="true"
-                  />
-                  <span>{option[0].toUpperCase() + option.slice(1)}</span>
-                </Button>
-              ))}
-              <small>Satellite imagery · 2016</small>
+              <button
+                type="button"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                aria-label="Zoom out"
+                title="Zoom out"
+                disabled={!canSwitchStyle}
+                onClick={() =>
+                  mapRef.current?.easeTo({
+                    zoom: mapRef.current.getZoom() - 1,
+                    duration: 500,
+                  })
+                }
+              >
+                <ZoomOut />
+              </button>
+              <button
+                type="button"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                aria-label="Zoom in"
+                title="Zoom in"
+                disabled={!canSwitchStyle}
+                onClick={() =>
+                  mapRef.current?.easeTo({
+                    zoom: mapRef.current.getZoom() + 1,
+                    duration: 500,
+                  })
+                }
+              >
+                <ZoomIn />
+              </button>
+              <button
+                type="button"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                aria-label={`Reset compass to north; current bearing ${Math.round(bearing)} degrees`}
+                title={`Bearing ${Math.round(bearing)}° · reset north`}
+                disabled={!canSwitchStyle}
+                onClick={() =>
+                  mapRef.current?.easeTo({ bearing: 0, duration: 500 })
+                }
+              >
+                <Compass style={{ transform: `rotate(${-bearing}deg)` }} />
+              </button>
+              <button
+                type="button"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                aria-label="Fit route"
+                title="Fit route"
+                disabled={!canSwitchStyle}
+                onClick={() =>
+                  mapRef.current?.fitBounds(routeBounds(world), {
+                    padding: 72,
+                    maxZoom: mapStyleMaxZoom(style, 15),
+                    duration: 700,
+                  })
+                }
+              >
+                <LocateFixed />
+              </button>
+              <button
+                type="button"
+                className={`grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 ${layersOpen ? 'bg-white/15' : ''}`}
+                aria-label="Layers and view options"
+                title="Layers and view options"
+                aria-expanded={layersOpen}
+                onClick={() => setLayersOpen(!layersOpen)}
+              >
+                <Layers size={20} />
+              </button>
             </div>
+          </div>
+          {layersOpen && controlsOpen && (
+            <section
+              className="absolute right-0 top-full z-10 w-[min(320px,calc(100vw-24px))] pt-2"
+              aria-label="Map settings"
+            >
+              <div className="rounded-2xl border border-white/50 bg-[#f7f8f0] p-3 text-[#19392c] shadow-xl shadow-[#173b3240]">
+                <header className="mb-3 flex items-center justify-between">
+                  <strong className="flex items-center gap-2 text-sm">
+                    <Settings size={16} /> Map Settings
+                  </strong>
+                  <button
+                    type="button"
+                    className="grid size-8 place-items-center rounded-lg hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-green-700"
+                    aria-label="Close map settings"
+                    onClick={() => setLayersOpen(false)}
+                  >
+                    <X size={18} />
+                  </button>
+                </header>
+                <p className="my-2 text-xs font-semibold">Map Style</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {mapStyles.map((option) => (
+                    <button
+                      key={option}
+                      className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-green-700 disabled:opacity-50 aria-pressed:outline-2 aria-pressed:outline-green-700 aria-pressed:bg-green-50"
+                      aria-pressed={style === option}
+                      disabled={!canSwitchStyle || styleLoading}
+                      onClick={() => {
+                        if (cameraOwner(engine.state) !== 'user') return;
+                        setStyle(option);
+                      }}
+                    >
+                      <span
+                        className="h-10 w-full rounded-md border border-[#aebbb0] bg-cover bg-center"
+                        aria-hidden="true"
+                        style={{
+                          backgroundImage:
+                            option === 'default'
+                              ? 'linear-gradient(125deg, transparent 42%, #f7f6eb 43% 53%, transparent 54%),linear-gradient(25deg, transparent 33%, #83b8c2 34% 45%, #a9c3a1 46%)'
+                              : `${option === 'hybrid' ? 'linear-gradient(125deg, transparent 42%, #f7f6eb 43% 48%, transparent 49%),' : ''}url(https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/7/57/100.jpg)`,
+                        }}
+                      />
+                      {option[0].toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex min-h-11 items-center justify-between border-t border-[#d9e0d6] text-xs">
+                  <span>3D Terrain</span>
+                  <input
+                    className="size-[18px] accent-[#3e7152]"
+                    type="checkbox"
+                    checked={terrain}
+                    disabled={!ready || !canSwitchStyle}
+                    onChange={(event) => {
+                      const enabled = event.target.checked;
+                      terrainEnabled.current = enabled;
+                      setTerrain(enabled);
+                      mapRef.current &&
+                        configureTerrainRef.current(
+                          enabled,
+                          exaggerationRef.current,
+                        );
+                    }}
+                  />
+                </label>
+                <label className="flex min-h-11 items-center justify-between gap-2 border-t border-[#d9e0d6] text-xs">
+                  <span>Terrain Exaggeration</span>
+                  <select
+                    className="rounded-md border border-[#bdc8b8] bg-white/80 px-2 py-1"
+                    aria-label="Terrain exaggeration"
+                    value={exaggeration}
+                    disabled={!ready || !terrain || !canSwitchStyle}
+                    onChange={(event) => {
+                      const factor = Number(event.target.value);
+                      if (
+                        !Number.isFinite(factor) ||
+                        factor < terrainProfile.minExaggeration ||
+                        factor > terrainProfile.maxExaggeration
+                      )
+                        return;
+                      exaggerationRef.current = factor;
+                      setExaggeration(factor);
+                      configureTerrainRef.current(true, factor);
+                    }}
+                  >
+                    {[1, 1.5, 2].map((factor) => (
+                      <option key={factor} value={factor}>
+                        {factor}×
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {styleLoading && (
+                  <small className="block px-2 py-1.5 text-xs text-[#637268]">
+                    Loading map style…
+                  </small>
+                )}
+                {styleError && (
+                  <small
+                    className="block px-2 py-1.5 text-xs text-[#637268]"
+                    role="status"
+                  >
+                    {styleError}
+                  </small>
+                )}
+                <details className="border-t border-[#d9e0d6] pt-2.5">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-xs">
+                    <FileText size={15} /> Map Credits &amp; Licenses
+                  </summary>
+                  <small className="mt-2 block whitespace-normal text-[11px] leading-relaxed text-[#637268]">
+                    <a
+                      className="underline"
+                      href="https://www.openstreetmap.org/copyright"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      © OpenStreetMap contributors
+                    </a>{' '}
+                    ·{' '}
+                    <a
+                      className="underline"
+                      href="https://openfreemap.org/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      © OpenFreeMap
+                    </a>{' '}
+                    ·{' '}
+                    <a
+                      className="underline"
+                      href="https://openmaptiles.org/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      © OpenMapTiles
+                    </a>{' '}
+                    ·{' '}
+                    <a
+                      className="underline"
+                      href="https://mapterhorn.com/attribution"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      © Mapterhorn
+                    </a>
+                    . Satellite imagery:{' '}
+                    <a
+                      className="underline"
+                      href="https://maps.eox.at/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      EOX Sentinel-2 cloudless 2016
+                    </a>
+                    ,{' '}
+                    <a
+                      className="underline"
+                      href="https://creativecommons.org/licenses/by/4.0/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      CC BY 4.0
+                    </a>
+                    .
+                  </small>
+                </details>
+              </div>
+            </section>
           )}
         </div>
-        <label className="terrain-toggle">
-          <input
-            type="checkbox"
-            checked={terrain}
-            disabled={!ready || cameraOwner(status) !== 'user'}
-            onChange={(event) => {
-              const enabled = event.target.checked,
-                map = mapRef.current;
-              terrainEnabled.current = enabled;
-              setTerrain(enabled);
-              if (map)
-                configureTerrainRef.current(enabled, exaggerationRef.current);
-            }}
-          />
-          3D terrain
-        </label>
-        <label>
-          Relief
-          <select
-            aria-label="Terrain exaggeration"
-            value={exaggeration}
-            disabled={!ready || !terrain || cameraOwner(status) !== 'user'}
-            onChange={(event) => {
-              const factor = Number(event.target.value);
-              if (
-                !Number.isFinite(factor) ||
-                factor < terrainProfile.minExaggeration ||
-                factor > terrainProfile.maxExaggeration
-              )
-                return;
-              exaggerationRef.current = factor;
-              setExaggeration(factor);
-              configureTerrainRef.current(true, factor);
-            }}
-          >
-            {[1, 1.5, 2].map((factor) => (
-              <option key={factor} value={factor}>
-                {factor.toFixed(1)}×
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
     </div>
   );

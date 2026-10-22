@@ -7,7 +7,12 @@ import {
   travelerFacing,
 } from './map';
 import { createWorld, parseGpx, unproject } from './route';
-import { applyMapStyle, type BaseLayer, type MapStyle } from './mapStyles';
+import {
+  applyMapStyle,
+  mapStyleMaxZoom,
+  type BaseLayer,
+  type MapStyle,
+} from './mapStyles';
 
 const point = (lat: number, lon: number) =>
   `<trkpt lat="${lat}" lon="${lon}"/>`;
@@ -105,6 +110,12 @@ describe('map style layers', () => {
     { id: 'labels', type: 'symbol', visibility: 'visible' },
     { id: 'hidden', type: 'line', visibility: 'none' },
   ];
+
+  it('caps satellite-backed views at the source resolution and restores the default limit', () => {
+    expect(mapStyleMaxZoom('satellite', 16)).toBe(14);
+    expect(mapStyleMaxZoom('hybrid', 16)).toBe(14);
+    expect(mapStyleMaxZoom('default', 16)).toBe(16);
+  });
 
   it.each([
     ['default', ['visible', 'visible', 'visible', 'none', 'none']],

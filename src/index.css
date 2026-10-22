@@ -675,109 +675,6 @@ h2 {
 .route-map.maplibregl-map {
   position: absolute;
 }
-.map-toolbar {
-  position: absolute;
-  z-index: 2;
-  top: 14px;
-  left: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  max-width: calc(100% - 100px);
-  padding: 7px;
-  background: #fffdf2ed;
-  border: 1px solid #d9ded3;
-  box-shadow: 2px 2px 0 #203d2e33;
-  color: #334c3e;
-  font-size: 10px;
-}
-.map-toolbar label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.map-toolbar select,
-.map-toolbar button {
-  min-height: 31px;
-  border: 1px solid #bdc8b8;
-  background: #fffef8;
-  color: #344d3e;
-  padding: 5px 8px;
-  font: inherit;
-}
-.map-toolbar button:disabled,
-.map-toolbar select:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.map-toolbar .terrain-toggle {
-  gap: 5px;
-}
-.map-toolbar input {
-  accent-color: #3e7152;
-}
-.map-style-picker {
-  position: relative;
-}
-.map-style-picker > button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.map-style-menu {
-  position: absolute;
-  top: calc(100% + 9px);
-  left: 0;
-  z-index: 4;
-  width: 186px;
-  padding: 6px;
-  border: 1px solid #bdc8b8;
-  background: #fffef8;
-  box-shadow: 3px 3px 0 #203d2e33;
-}
-.map-style-menu button {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 9px;
-  text-align: left;
-  border: 0;
-  background: transparent;
-}
-.map-style-menu button[aria-pressed='true'] {
-  background: #e4ecdf;
-  color: #234e36;
-}
-.map-style-menu small {
-  display: block;
-  padding: 6px 8px 2px;
-  color: #637268;
-  line-height: 1.4;
-}
-.map-style-preview {
-  width: 42px;
-  height: 32px;
-  flex: none;
-  border: 1px solid #aebbb0;
-  background-color: #a9c3a1;
-  background-size: cover;
-}
-.preview-default {
-  background-image:
-    linear-gradient(125deg, transparent 42%, #f7f6eb 43% 53%, transparent 54%),
-    linear-gradient(25deg, transparent 33%, #83b8c2 34% 45%, transparent 46%);
-}
-.preview-satellite,
-.preview-hybrid {
-  background-image: url('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/7/57/100.jpg');
-}
-.preview-hybrid {
-  background-image:
-    linear-gradient(125deg, transparent 42%, #f7f6eb 43% 48%, transparent 49%),
-    url('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/7/57/100.jpg');
-}
 .map-loading {
   position: absolute;
   z-index: 3;
@@ -796,16 +693,6 @@ h2 {
   border-radius: 50%;
   background: #e85f3d;
   box-shadow: 0 1px 6px #182a2caa;
-}
-.route-map .maplibregl-ctrl-group {
-  overflow: hidden;
-  border: 1px solid #d0d8cf;
-  border-radius: 2px;
-  box-shadow: 2px 2px 0 #203d2e33;
-}
-.route-map .maplibregl-ctrl-attrib {
-  font-family: var(--font-trailbound);
-  font-size: 10px;
 }
 .camera-label {
   position: absolute;
@@ -1861,7 +1748,6 @@ input:focus-visible {
   overflow: hidden;
   z-index: 4;
 }
-.show-summary .map-toolbar,
 .show-summary .maplibregl-control-container,
 .show-summary .maplibregl-marker,
 .show-summary .maplibregl-popup {
