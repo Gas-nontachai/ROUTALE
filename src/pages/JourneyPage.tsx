@@ -18,6 +18,7 @@ import {
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
 import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
+import { Button } from '../components/ui/button';
 import { JourneySummary } from '../components/JourneySummary';
 import { useGpxStore, useWorldStore, useSimulationStore } from '../stores';
 
@@ -136,7 +137,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto !bg-[#F7F8F3] !text-[#20372F] lg:overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <button
+          <Button
+            variant="unstyled"
             type="button"
             onClick={() => {
               simulation.pause();
@@ -147,7 +149,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             className="grid size-9 shrink-0 place-items-center rounded-lg !text-[#244638] transition hover:!bg-[#E6EFE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#367047]"
           >
             <ArrowLeft size={22} />
-          </button>
+          </Button>
 
           <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
             {/* Left: Activity name & type */}
@@ -174,14 +176,15 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
         </div>
         {isCompleted && (
-          <button
+          <Button
+            variant="default"
             type="button"
             onClick={togglePlayback}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
           >
             <RotateCcw size={17} />
             {'Replay Simulation'}
-          </button>
+          </Button>
         )}
       </header>
 
@@ -246,7 +249,9 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         >
           <div className="flex w-full items-center gap-3">
             {/* Play / Pause */}
-            <button
+            <Button
+              variant="default"
+              size="icon"
               type="button"
               onClick={togglePlayback}
               aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
@@ -257,7 +262,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               ) : (
                 <Play size={20} fill="currentColor" />
               )}
-            </button>
+            </Button>
 
             {/* Time */}
             <span className="shrink-0 whitespace-nowrap text-sm font-medium tabular-nums">
@@ -291,7 +296,9 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             </div>
 
             {/* Speed */}
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               type="button"
               aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
               title="Change playback speed"
@@ -303,16 +310,17 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#D5E4D8] bg-white text-sm font-semibold text-[#356B42] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
             >
               {simulation.speed}x
-            </button>
+            </Button>
 
             {/* Summary */}
-            <button
+            <Button
+              variant="outline"
               type="button"
               onClick={() => simulation.showSummary()}
               className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-white px-4 text-sm font-medium text-[#233B31] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
             >
               Summary
-            </button>
+            </Button>
           </div>
         </section>
       )}

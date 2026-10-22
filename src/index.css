@@ -51,21 +51,12 @@
 body {
   margin: 0;
 }
-button,
 a,
 input {
   -webkit-tap-highlight-color: transparent;
 }
-button,
 a {
   touch-action: manipulation;
-}
-button {
-  cursor: pointer;
-  font: inherit;
-}
-button:disabled {
-  cursor: not-allowed;
 }
 button:focus-visible,
 a:focus-visible {
@@ -75,9 +66,6 @@ a:focus-visible {
 a {
   color: inherit;
   text-decoration: none;
-}
-button svg {
-  flex-shrink: 0;
 }
 h2,
 p {
@@ -136,18 +124,6 @@ p {
   height: 6px;
   display: inline-block;
   background: #65834e;
-}
-.text-button {
-  border: 0;
-  background: none;
-  font-size: 12px;
-  display: flex;
-  gap: 12px;
-  color: var(--forest);
-  padding: 10px 0;
-}
-.text-button span {
-  color: #8d957e;
 }
 .page-heading {
   text-align: center;
@@ -250,76 +226,12 @@ h2 {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid transparent;
-  padding: 11px 16px;
-  line-height: 1.4;
-  transition:
-    background 0.15s,
-    transform 0.15s;
-  white-space: nowrap;
-}
-.button:active:not(:disabled) {
-  transform: translate(1px, 2px);
-}
-.button-primary {
-  color: #f9f6df;
-  background: var(--forest);
-  border-color: #173d29;
-  box-shadow: 3px 3px 0 #b0b99b;
-}
-.button-primary:hover:not(:disabled) {
-  background: #326345;
-}
-.button-primary:disabled {
-  opacity: 0.42;
-}
-.button-outline {
-  border: 1px solid #9da98b;
-  background: #fafbf3;
-  color: #405833;
-  box-shadow: 2px 2px 0 #dce1ce;
-}
-.button-outline:hover {
-  background: #ecf0dd;
-}
-.button-ghost {
-  background: transparent;
-  color: var(--forest);
-}
-.button-icon {
-  padding: 10px;
-  width: 43px;
-  height: 43px;
-}
-.dropzone .button {
-  font-size: 11px;
-  padding: 9px 16px;
-}
 .dropzone small {
   font-family: var(--font-trailbound);
   font-size: 7px;
   letter-spacing: 1px;
   color: #929984;
   margin-top: 18px;
-}
-.generate-button {
-  margin-top: 21px;
-  width: 100%;
-  padding: 13px;
-  font-size: 12px;
-}
-.generate-button svg:last-child {
-  margin-left: auto;
-}
-.generate-button svg:first-child {
-  margin-right: auto;
 }
 .sample-line {
   display: flex;
@@ -329,18 +241,6 @@ h2 {
   font-size: 10px;
   color: #929783;
   margin: 18px 0 23px;
-}
-.sample-line button {
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #4f6740;
-  background: none;
-  border: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  font-size: 10px;
 }
 .privacy {
   display: flex;
@@ -415,22 +315,6 @@ h2 {
   background: #f7f5e9ed;
   box-shadow: 2px 2px 0 #263e2b55;
   cursor: default;
-}
-.camera-controls button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #34533d;
-}
-.camera-controls button:hover:not(:disabled) {
-  background: #e4e9d6;
-}
-.camera-controls button:disabled {
-  color: #9ca38f;
 }
 .camera-controls > span {
   height: 20px;
@@ -835,9 +719,6 @@ h2 {
   padding: 19px;
   margin-top: 20px;
 }
-.play-button {
-  min-width: 105px;
-}
 .progress-area {
   flex: 1;
   margin: 0 12px;
@@ -1047,9 +928,6 @@ progress::-moz-progress-bar {
   .sample-line {
     font-size: 9px;
   }
-  .sample-line button {
-    font-size: 9px;
-  }
 }
 @media (max-width: 760px) {
   .site-header {
@@ -1072,9 +950,6 @@ progress::-moz-progress-bar {
   }
   .edition {
     display: none;
-  }
-  .text-button {
-    font-size: 10px;
   }
   .page-heading p {
     font-size: 12px;
@@ -1105,8 +980,7 @@ progress::-moz-progress-bar {
   .privacy {
     font-size: 9px;
   }
-  .sample-line,
-  .sample-line button {
+  .sample-line {
     font-size: 10px;
   }
   .how-strip {
@@ -1520,9 +1394,6 @@ h2 {
   font-size: 12px;
   line-height: 1.8;
 }
-.button-ghost:disabled {
-  opacity: 0.4;
-}
 select:focus-visible,
 input:focus-visible {
   outline: 2px solid #b18d43;
@@ -1667,16 +1538,6 @@ input:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.summary-replay.button {
-  flex-shrink: 0;
-  border: 1px solid #cbdcce;
-  border-radius: 9px;
-  background: transparent;
-  color: #285d3e;
-  box-shadow: none;
-  padding: 7px 10px;
-  font-size: 12px;
-}
 .summary-map-space {
   height: 180px;
   margin: 12px 0 18px;
@@ -1796,12 +1657,6 @@ input:focus-visible {
     margin-top: 4px;
     font-size: 11px;
     padding: 2px 8px;
-  }
-  .summary-replay.button {
-    padding: 7px;
-  }
-  .summary-replay span {
-    display: none;
   }
   .summary-map-space {
     height: 160px;

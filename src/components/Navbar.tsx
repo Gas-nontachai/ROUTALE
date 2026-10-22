@@ -1,4 +1,5 @@
 import { Mountain, Sun, Moon } from 'lucide-react';
+import { Button } from './ui/button';
 
 type NavbarProps = {
   isDark?: boolean;
@@ -21,7 +22,9 @@ export const Navbar = ({ isDark = false, onToggleTheme }: NavbarProps) => {
           </span>
         </div>
 
-        <button
+        <Button
+          variant="unstyled"
+          size="icon"
           type="button"
           onClick={onToggleTheme}
           disabled={!onToggleTheme}
@@ -29,7 +32,7 @@ export const Navbar = ({ isDark = false, onToggleTheme }: NavbarProps) => {
           className="rounded-lg p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
         >
           {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-        </button>
+        </Button>
       </div>
     </header>
   );

@@ -41,6 +41,7 @@ import {
   type BaseLayer,
   type MapStyle,
 } from '../lib/mapStyles';
+import { Button } from '../components/ui/button';
 maplibregl.setWorkerUrl(workerUrl);
 const terrainMaxZoom = navigator.hardwareConcurrency <= 4 ? 10 : 12;
 const fallbackStyle: StyleSpecification = {
@@ -731,7 +732,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
             setControlsOpen(false);
           }}
         >
-          <button
+          <Button
+            variant="unstyled"
             ref={layersButton}
             type="button"
             className={`group absolute right-0 grid size-10 shrink-0 place-items-center rounded-full transition-[opacity,transform] duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-amber-200 motion-reduce:transition-none ${controlsOpen ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'}`}
@@ -747,7 +749,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               className="transition-transform duration-200 ease-in-out group-hover:rotate-45"
               size={19}
             />
-          </button>
+          </Button>
           <div
             id="map-controls-menu"
             className={`flex min-w-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'w-full opacity-100' : 'pointer-events-none w-0 opacity-0'}`}
@@ -759,7 +761,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               role="group"
               aria-label="Map controls"
             >
-              <button
+              <Button
+                variant="unstyled"
                 type="button"
                 className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
                 aria-label="Zoom out"
@@ -773,8 +776,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 }
               >
                 <ZoomOut />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
                 aria-label="Zoom in"
@@ -788,8 +792,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 }
               >
                 <ZoomIn />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
                 aria-label={`Reset compass to north; current bearing ${Math.round(bearing)} degrees`}
@@ -800,8 +805,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 }
               >
                 <Compass style={{ transform: `rotate(${-bearing}deg)` }} />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
                 aria-label="Fit route"
@@ -816,8 +822,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 }
               >
                 <LocateFixed />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 className={`grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 ${layersOpen ? 'bg-white/15' : ''}`}
                 aria-label="Layers and view options"
@@ -826,7 +833,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 onClick={() => setLayersOpen(!layersOpen)}
               >
                 <Layers size={20} />
-              </button>
+              </Button>
             </div>
           </div>
           {layersOpen && controlsOpen && (
@@ -839,19 +846,21 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                   <strong className="flex items-center gap-2 text-sm">
                     <Settings size={16} /> Map Settings
                   </strong>
-                  <button
+                  <Button
+                    variant="unstyled"
                     type="button"
                     className="grid size-8 place-items-center rounded-lg hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-green-700"
                     aria-label="Close map settings"
                     onClick={() => setLayersOpen(false)}
                   >
                     <X size={18} />
-                  </button>
+                  </Button>
                 </header>
                 <p className="my-2 text-xs font-semibold">Map Style</p>
                 <div className="grid grid-cols-3 gap-1">
                   {mapStyles.map((option) => (
-                    <button
+                    <Button
+                      variant="unstyled"
                       key={option}
                       className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-green-700 disabled:opacity-50 aria-pressed:outline-2 aria-pressed:outline-green-700 aria-pressed:bg-green-50"
                       aria-pressed={style === option}
@@ -872,7 +881,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                         }}
                       />
                       {option[0].toUpperCase() + option.slice(1)}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <label className="flex min-h-11 items-center justify-between border-t border-[#d9e0d6] text-xs">
