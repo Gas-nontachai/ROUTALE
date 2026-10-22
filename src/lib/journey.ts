@@ -8,7 +8,7 @@ import {
   smootherstep,
 } from './motion';
 
-export type CameraMode = 'Follow' | 'Wide' | 'Side' | 'Top-down' | 'Scenic';
+type CameraMode = 'Follow' | 'Wide' | 'Side' | 'Top-down' | 'Scenic';
 export type CameraFrame = {
   x: number;
   y: number;

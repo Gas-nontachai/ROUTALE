@@ -1,10 +1,10 @@
 import { meters, type Activity, type GPSPoint } from './route';
-export type RoutePoint = GPSPoint & {
+type RoutePoint = GPSPoint & {
   sourceIndex: number;
   distance: number;
   timestampMs?: number;
 };
-export type Movement = {
+type Movement = {
   type: 'stay' | 'loop' | 'backtracking';
   segment: number;
   startIndex: number;
@@ -13,7 +13,7 @@ export type Movement = {
   loopCount?: number;
   compressedFrom?: number;
 };
-export type RouteStats = {
+type RouteStats = {
   distance: number;
   duration?: number;
   movingTime?: number;
@@ -75,7 +75,7 @@ export type ActivitySeries = {
   gradient: AnalysisSample[];
   temperature: AnalysisSample[];
 };
-export type DistanceSplit = {
+type DistanceSplit = {
   kilometer: number;
   distance: number;
   partial: boolean;

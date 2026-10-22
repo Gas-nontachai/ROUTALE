@@ -13,7 +13,7 @@ export type MapFeature = {
   name?: string;
   closed: boolean;
 };
-export type TerrainSample = Point & { elevation: number };
+type TerrainSample = Point & { elevation: number };
 export type Geography = {
   features: MapFeature[];
   terrain: TerrainSample[];

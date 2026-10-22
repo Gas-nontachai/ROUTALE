@@ -4,6 +4,9 @@ set -e
 echo "🎨 Formatting staged files..."
 npx lint-staged
 
+echo "🔎 Checking for dead code..."
+npm run knip
+
 echo "🧪 Running tests..."
 npm test
 

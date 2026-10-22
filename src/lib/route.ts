@@ -34,7 +34,7 @@ export type Activity = {
   ascent: number;
   seed: number;
 };
-export type Spot = Point & {
+type Spot = Point & {
   id: string;
   type: 'start' | 'finish' | 'rest' | 'loop' | 'summit';
   label: string;

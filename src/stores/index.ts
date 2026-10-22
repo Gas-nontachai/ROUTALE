@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { isMapStyle, type MapStyle } from '../lib/mapStyles';
 import type { Activity, AnimationStep, World } from '../lib/route';
-import type { ProcessedRoute } from '../lib/analysis';
 import type { Geography } from '../lib/geography';
 export const useGpxStore = create<{
   activity: Activity | null;
@@ -23,13 +22,6 @@ export const useGpxStore = create<{
   status: 'idle',
   error: '',
   set,
-}));
-export const useRouteStore = create<{
-  processed: ProcessedRoute | null;
-  setProcessed: (processed: ProcessedRoute) => void;
-}>((set) => ({
-  processed: null,
-  setProcessed: (processed) => set({ processed }),
 }));
 export const useWorldStore = create<{
   world: World | null;

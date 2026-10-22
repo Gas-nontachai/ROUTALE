@@ -43,7 +43,7 @@ const mercatorY = (lat: number) =>
       Math.PI / 4 + (clamp(lat, -85.0511287, 85.0511287) * Math.PI) / 360,
     ),
   );
-export function interpolateCenter(
+function interpolateCenter(
   a: [number, number],
   b: [number, number],
   t: number,
