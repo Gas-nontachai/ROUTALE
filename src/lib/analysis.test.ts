@@ -1,4 +1,4 @@
-import smartDemo from '../../public/Smart_Route.gpx?raw';
+import smartDemo from './fixtures/Smart_Route.gpx?raw';
 import { describe, expect, it } from 'vitest';
 import { analyzeRoute } from './analysis';
 import { animationAt, createWorld, parseGpx, type GPSPoint } from './route';

@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import fixture from '../../public/Lunch_Hike.gpx?raw';
+import fixture from './fixtures/Lunch_Hike.gpx?raw';
 afterEach(() => vi.unstubAllGlobals());
 it('processes a real fixture in the worker protocol and reports invalid XML safely', async () => {
   const worker = {

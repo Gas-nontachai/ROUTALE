@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import smartDemo from '../../public/Smart_Route.gpx?raw';
-import hike from '../../public/Lunch_Hike.gpx?raw';
+import smartDemo from './fixtures/Smart_Route.gpx?raw';
+import hike from './fixtures/Lunch_Hike.gpx?raw';
 import alpine from './fixtures/alpine-terrain.gpx?raw';
 import { buildJourney, evaluateJourney } from './journey';
 import { createWorld, parseGpx } from './route';

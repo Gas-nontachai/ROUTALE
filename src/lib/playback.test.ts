@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import sample from '../../public/Smart_Route.gpx?raw';
+import sample from './fixtures/Smart_Route.gpx?raw';
 import { JourneyController } from './playback';
 import { buildJourney, evaluateJourney } from './journey';
 import { createWorld, parseGpx } from './route';

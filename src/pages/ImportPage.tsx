@@ -29,17 +29,15 @@ export function ImportPage({ onPreview }: ImportPageProps) {
   const simulation = useSimulationStore();
   const [importStage, setImportStage] = useState('Reading your trail…');
   const [dragging, setDragging] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const requestIdRef = useRef(0);
-  const demoRequestRef = useRef(0);
   const mountedRef = useRef(false);
 
-  const isLoading = status === 'loading' || demoLoading;
+  const isLoading = status === 'loading';
 
   function clearWorker() {
     if (timeoutRef.current !== null) {
@@ -55,7 +53,6 @@ export function ImportPage({ onPreview }: ImportPageProps) {
     return () => {
       mountedRef.current = false;
       requestIdRef.current += 1;
-      demoRequestRef.current += 1;
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
       workerRef.current?.terminate();
       workerRef.current = null;
@@ -64,8 +61,6 @@ export function ImportPage({ onPreview }: ImportPageProps) {
 
   async function importFile(file: File) {
     const id = ++requestIdRef.current;
-    ++demoRequestRef.current;
-    setDemoLoading(false);
     clearWorker();
     set({ error: '', status: 'loading', activity: null, originalFile: file });
     setImportStage('Reading and validating GPX…');
@@ -136,29 +131,6 @@ export function ImportPage({ onPreview }: ImportPageProps) {
     }
   }
 
-  async function loadDemo(smart = false) {
-    if (isLoading) return;
-    const demoId = ++demoRequestRef.current;
-    setDemoLoading(true);
-    const name = smart ? 'Smart_Route.gpx' : 'Lunch_Hike.gpx';
-    try {
-      const response = await fetch(`/${name}`);
-      if (!response.ok) throw new Error('Sample unavailable');
-      const xml = await response.text();
-      if (!mountedRef.current || demoId !== demoRequestRef.current) return;
-      await importFile(new File([xml], name, { type: 'application/gpx+xml' }));
-    } catch {
-      if (!mountedRef.current || demoId !== demoRequestRef.current) return;
-      set({
-        status: 'error',
-        error: 'The sample could not be loaded. Try your own GPX.',
-      });
-    } finally {
-      if (mountedRef.current && demoId === demoRequestRef.current)
-        setDemoLoading(false);
-    }
-  }
-
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain py-4 lg:overflow-hidden lg:py-3">
       <div className="flex min-h-0 w-full flex-1 items-center justify-center py-3 sm:py-5">
@@ -219,11 +191,7 @@ export function ImportPage({ onPreview }: ImportPageProps) {
               aria-live="polite"
               className="text-base font-semibold text-foreground"
             >
-              {isLoading
-                ? demoLoading
-                  ? 'Loading sample trail…'
-                  : importStage
-                : 'Drop your GPX file here'}
+              {isLoading ? importStage : 'Drop your GPX file here'}
             </strong>
             <p className="mt-1 text-xs text-muted">
               {isLoading
@@ -239,14 +207,6 @@ export function ImportPage({ onPreview }: ImportPageProps) {
                 size="sm"
               >
                 <Upload size={15} /> Choose GPX file
-              </Button>
-              <Button
-                variant="outline"
-                disabled={isLoading}
-                onClick={() => void loadDemo()}
-              >
-                <Play size={16} aria-hidden="true" />
-                Try a sample trail
               </Button>
             </div>
             <input
