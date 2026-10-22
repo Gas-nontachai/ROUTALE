@@ -118,6 +118,7 @@ export function SummaryMap({ world }: { world: World }) {
         setError('');
     });
     const observer = new ResizeObserver(() => {
+      if (!element.clientWidth || !element.clientHeight) return;
       map.resize();
       if (routeReady) fitRoute();
     });
@@ -131,24 +132,43 @@ export function SummaryMap({ world }: { world: World }) {
   }, [coordinates]);
 
   return (
-    <div className="relative h-full min-h-[240px] w-full overflow-hidden rounded-xl bg-[#E9EEE7]">
-      <div
-        ref={elementRef}
-        className="absolute inset-0"
-        style={{ position: 'absolute', inset: 0 }}
-        aria-label="Full journey route map"
-        role="img"
-      />
-      {!coordinates.some((segment) => segment.length >= 2) && (
-        <div className="absolute inset-0 grid place-items-center px-5 text-center text-sm text-stone-600">
-          Route coordinates unavailable.
-        </div>
-      )}
-      {error && (
-        <div className="absolute left-3 top-3 rounded bg-white/90 p-2 text-xs">
-          {error}
-        </div>
-      )}
+    <div className="flex h-full min-h-[240px] w-full flex-col gap-1">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-[#E9EEE7]">
+        <div
+          ref={elementRef}
+          className="absolute inset-0"
+          style={{ position: 'absolute', inset: 0 }}
+          aria-label="Full journey route map"
+          role="img"
+        />
+        {!coordinates.some((segment) => segment.length >= 2) && (
+          <div className="absolute inset-0 grid place-items-center px-5 text-center text-sm text-stone-600">
+            Route coordinates unavailable.
+          </div>
+        )}
+        {error && (
+          <div className="absolute left-3 top-3 rounded bg-white/90 p-2 text-xs">
+            {error}
+          </div>
+        )}
+      </div>
+      <p className="text-right text-[10px] text-[#65776C]">
+        <a href="https://openfreemap.org/" target="_blank" rel="noreferrer">
+          OpenFreeMap
+        </a>
+        {' · '}
+        <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">
+          © OpenMapTiles
+        </a>
+        {' · '}
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noreferrer"
+        >
+          © OpenStreetMap contributors
+        </a>
+      </p>
     </div>
   );
 }

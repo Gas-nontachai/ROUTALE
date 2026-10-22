@@ -1,4 +1,5 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
+import { normalizeGpx } from './gpxSensors';
 import { clamp, angleDelta, motionProfile } from './motion';
 import { analyzeRoute, type ProcessedRoute } from './analysis';
 export type GPSPoint = {
@@ -6,6 +7,12 @@ export type GPSPoint = {
   lon: number;
   elevation?: number;
   time?: string;
+  heartRate?: number;
+  cadence?: number;
+  cadenceType?: 'running' | 'cycling' | 'unknown';
+  temperature?: number;
+  power?: number;
+  speed?: number;
 };
 export type Point = {
   x: number;
@@ -18,6 +25,9 @@ export type Point = {
 export type Activity = {
   name: string;
   type?: string;
+  unsupportedExtensions?: boolean;
+  description?: string;
+  recordedAt?: string;
   count: number;
   segments: GPSPoint[][];
   distance: number;
@@ -78,11 +88,13 @@ export function parseGpx(
     throw new Error('GPX files with document entities are not supported.');
   if (XMLValidator.validate(xml) !== true)
     throw new Error('This file is not valid GPX XML.');
-  const root = new XMLParser({
-    ignoreAttributes: false,
-    removeNSPrefix: true,
-    parseAttributeValue: false,
-  }).parse(xml).gpx;
+  const root = normalizeGpx(
+    new XMLParser({
+      ignoreAttributes: false,
+      removeNSPrefix: false,
+      parseAttributeValue: false,
+    }).parse(xml),
+  ).gpx;
   if (!root) throw new Error('Choose a GPX file with a <gpx> root.');
   const tracks = list<any>(root.trk);
   const raw = tracks.flatMap((t) =>
@@ -91,6 +103,7 @@ export function parseGpx(
   if (!raw.length)
     raw.push(...list<any>(root.rte).map((r) => list<any>(r.rtept)));
   const segments: GPSPoint[][] = [];
+  let unsupportedExtensions = false;
   let count = 0,
     distance = 0,
     ascent = 0;
@@ -123,8 +136,19 @@ export function parseGpx(
         Number.isFinite(Number(p.ele))
       )
         point.elevation = Number(p.ele);
-      if (typeof p.time === 'string' && Number.isFinite(Date.parse(p.time)))
-        point.time = p.time;
+      if (typeof p.time === 'string') point.time = p.time;
+      Object.assign(point, p.extensions?.sensors);
+      unsupportedExtensions ||= Boolean(p.extensions?.unsupported);
+      if (point.cadence !== undefined) {
+        const type = String(
+          tracks[0]?.type || list<any>(root.rte)[0]?.type || '',
+        ).toLowerCase();
+        point.cadenceType = /cycl|bik/.test(type)
+          ? 'cycling'
+          : /run/.test(type)
+            ? 'running'
+            : 'unknown';
+      }
       valid.push(point);
       if (++count > 300000)
         throw new Error(
@@ -163,6 +187,10 @@ export function parseGpx(
         filename.replace(/\.gpx$/i, ''),
     ),
     type: String(tracks[0]?.type || list<any>(root.rte)[0]?.type || ''),
+    unsupportedExtensions,
+    description: root.metadata?.desc ? String(root.metadata.desc) : undefined,
+    recordedAt:
+      typeof root.metadata?.time === 'string' ? root.metadata.time : undefined,
     count,
     segments,
     distance,

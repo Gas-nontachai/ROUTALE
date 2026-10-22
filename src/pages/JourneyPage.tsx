@@ -152,9 +152,9 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             <ChevronLeft size={22} />
           </Button>
 
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3">
             {/* Left: Activity name & type */}
-            <div className="flex min-w-0 items-baseline gap-3">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-3">
               <h1 className="min-w-0 truncate text-2xl font-extrabold leading-none tracking-tight !text-[#19392C] sm:text-3xl">
                 {activity.name}
               </h1>
@@ -221,7 +221,13 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             aria-label="Journey summary"
             inert
           >
-            <JourneySummary world={world} />
+            {(simulation.completion > 0 || isCompleted) && (
+              <JourneySummary
+                world={world}
+                activity={activity}
+                onReplay={handleReplay}
+              />
+            )}
           </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">

@@ -1,76 +1,238 @@
 import { durationLabel } from './AdventureStats';
 import { SummaryMap } from './SummaryMap';
-import type { World } from '../lib/route';
+import type { Activity, World } from '../lib/route';
+import { activityKind, timestamp } from '../lib/analysis';
+import { metricLabel, paceLabel } from '../lib/format';
+import { ActivityAnalysis } from './ActivityAnalysis';
+import { ActivityTypeBadge } from './ActivityTypeBadge';
+import { Button } from './ui/button';
 
-export function JourneySummary({ world }: { world: World }) {
+type Metric = [string, string];
+export function summaryMetrics(world: World, type?: string) {
   const { stats } = world.processed;
-  const primary = [
-    ['Total distance', `${(stats.distance / 1000).toFixed(2)} km`],
+  const kind = activityKind(type);
+  const pace: Metric = ['Avg. Moving Pace', paceLabel(stats.averageMovingPace)];
+  const speed: Metric = [
+    'Avg. Moving Speed',
+    metricLabel(
+      stats.averageMovingSpeed === undefined
+        ? undefined
+        : stats.averageMovingSpeed * 3.6,
+      'km/h',
+      1,
+    ),
+  ];
+  const gain: Metric = ['Elevation gain', metricLabel(stats.ascent, 'm')];
+  const primary: Metric[] = [
+    ['Total distance', metricLabel(stats.distance / 1000, 'km', 2)],
     ['Moving time', durationLabel(stats.movingTime)],
-    [
-      'Avg. pace',
-      !stats.averageSpeed
-        ? 'Not available'
-        : `${durationLabel(1000 / stats.averageSpeed)} / km`,
-    ],
+    kind === 'cycling'
+      ? speed
+      : kind === 'running' || kind === 'walking'
+        ? pace
+        : gain,
   ];
-  const secondary = [
+  const secondary: Metric[] = [
+    ['Elapsed time', durationLabel(stats.elapsedTime)],
+    ['Recorded duration', durationLabel(stats.duration)],
     [
-      'Elevation gain',
-      stats.ascent === undefined
-        ? 'Not available'
-        : `${Math.round(stats.ascent)} m`,
+      'Moving distance',
+      metricLabel(
+        stats.movingDistance === undefined
+          ? undefined
+          : stats.movingDistance / 1000,
+        'km',
+        2,
+      ),
     ],
-    ['Elapsed time', durationLabel(stats.duration)],
-    [
-      'Avg. speed',
-      stats.averageSpeed === undefined
-        ? 'Not available'
-        : `${(stats.averageSpeed * 3.6).toFixed(1)} km/h`,
-    ],
+    ['Elevation loss', metricLabel(stats.descent, 'm')],
+    ['Minimum elevation', metricLabel(stats.minElevation, 'm')],
+    ['Maximum elevation', metricLabel(stats.maxElevation, 'm')],
   ];
-
+  if (kind !== 'unknown') {
+    if (kind === 'hiking' || kind === 'trail-running') secondary.push(pace);
+    else secondary.push(gain);
+    secondary.push(
+      kind === 'cycling'
+        ? [
+            'Avg. Elapsed Speed',
+            metricLabel(
+              stats.averageElapsedSpeed === undefined
+                ? undefined
+                : stats.averageElapsedSpeed * 3.6,
+              'km/h',
+              1,
+            ),
+          ]
+        : ['Elapsed pace', paceLabel(stats.elapsedPace)],
+    );
+  }
+  for (const [key, label, unit] of [
+    ['heartRate', 'Heart Rate', 'bpm'],
+    ['cadence', 'Cycling cadence', 'rpm'],
+    ['power', 'Power', 'W'],
+    ['temperature', 'Device temperature', '°C'],
+  ] as const) {
+    const sensor = stats.sensors[key];
+    if (sensor?.average !== undefined)
+      secondary.push([`Avg. ${label}`, metricLabel(sensor.average, unit)]);
+    if (key !== 'temperature' && sensor?.max !== undefined)
+      secondary.push([`Max. ${label}`, metricLabel(sensor.max, unit)]);
+  }
+  return {
+    primary,
+    secondary: secondary.filter(([, value]) => value !== 'Not available'),
+  };
+}
+function Metrics({ items }: { items: Metric[] }) {
+  return (
+    <dl className="grid grid-cols-3 gap-x-3 gap-y-5">
+      {items.map(([label, value]) => (
+        <div key={label} className="min-w-0">
+          <dt className="text-xs font-medium text-[#65776C]">{label}</dt>
+          <dd className="mt-1 break-words text-lg font-bold text-[#19392C] sm:text-2xl">
+            {value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+export function JourneySummary({
+  world,
+  activity,
+  onReplay,
+}: {
+  world: World;
+  activity?: Activity;
+  onReplay?: () => void;
+}) {
+  const { primary, secondary } = summaryMetrics(world, activity?.type);
+  const { stats, splits } = world.processed;
+  const date = timestamp(activity?.recordedAt ?? activity?.segments[0][0].time);
   return (
     <section
-      className="flex min-h-full flex-col gap-4 bg-[#F7F8F3] p-4 sm:p-5"
-      aria-label="Journey summary"
+      className="flex min-w-0 flex-col gap-5 bg-[#F7F8F3] p-4 sm:p-6"
+      aria-label="Activity summary"
     >
-      <div className="h-[260px] shrink-0 sm:h-[330px] lg:min-h-[260px] lg:flex-1">
-        <SummaryMap world={world} />
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#65776C]">
+            The real journey
+          </p>
+          <h2
+            tabIndex={-1}
+            className="break-words text-2xl font-bold text-[#19392C]"
+          >
+            {activity?.name ?? 'Activity summary'}
+          </h2>
+          <ActivityTypeBadge type={activity?.type} />
+          {Number.isFinite(date) && (
+            <p className="mt-2 text-sm text-[#65776C]">
+              {new Date(date).toLocaleString('en', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </p>
+          )}
+        </div>
+        {onReplay && <Button onClick={onReplay}>Replay Adventure</Button>}
+      </header>
+      <div className="order-2 border-b border-[#D8E1D8] pb-5 lg:order-none">
+        <Metrics items={primary} />
       </div>
-
-      <dl className="grid grid-cols-3 gap-x-3 gap-y-4 border-b border-[#D8E1D8] pb-4">
-        {primary.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-xs font-medium text-[#65776C]">{label}</dt>
-            <dd className="mt-1 text-lg font-bold text-[#19392C] sm:text-2xl">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <dl className="grid grid-cols-3 gap-x-3 gap-y-4">
-        {secondary.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-xs font-medium text-[#65776C]">{label}</dt>
-            <dd className="mt-1 text-base font-semibold text-[#19392C] sm:text-lg">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {stats.partialTime && (
-        <p className="text-xs text-stone-600">
-          Timestamp coverage is incomplete. Moving time and average speed are
-          unavailable.
-        </p>
-      )}
-      {stats.partialElevation && (
-        <p className="text-xs text-stone-600">
-          Elevation coverage is incomplete; gain includes only recorded adjacent
-          samples.
-        </p>
-      )}
+      <div className="contents lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:gap-6">
+        <div className="order-1 h-[280px] min-w-0 sm:h-[360px] lg:order-none">
+          <SummaryMap world={world} />
+        </div>
+        <div className="order-3 min-w-0">
+          <Metrics items={secondary} />
+        </div>
+      </div>
+      <div className="order-4 space-y-4">
+        {activity?.unsupportedExtensions && (
+          <p className="text-sm text-[#65776C]">
+            Unsupported GPX extensions were ignored; only recognized sensor
+            schemas are analyzed.
+          </p>
+        )}
+        {!stats.availability.moving.available && !stats.partialTime && (
+          <p className="text-sm text-[#65776C]">
+            Insufficient verified movement: long recording gaps or stationary
+            intervals cannot establish an average moving pace or speed.
+          </p>
+        )}
+        {stats.partialTime && (
+          <p className="text-sm text-[#65776C]">
+            {stats.duration === undefined
+              ? 'No valid timestamps.'
+              : 'Partial or invalid timestamps.'}{' '}
+            Moving averages require complete ordered timing. Recorded duration
+            includes only valid adjacent intervals.
+          </p>
+        )}
+        {stats.ascent === undefined ? (
+          <p className="text-sm text-[#65776C]">
+            No continuous elevation recorded.
+          </p>
+        ) : (
+          stats.partialElevation && (
+            <p className="text-sm text-[#65776C]">
+              Partial elevation: gain and loss include recorded sections only.
+            </p>
+          )
+        )}
+        {Object.entries(stats.sensors).some(
+          ([, sensor]) =>
+            sensor?.max !== undefined && sensor.average === undefined,
+        ) && (
+          <p className="text-sm text-[#65776C]">
+            Sensor coverage is incomplete. Activity averages require at least
+            80% recorded time coverage with gaps of at most 60 seconds.
+          </p>
+        )}
+        <ActivityAnalysis
+          activityType={activity?.type ?? ''}
+          series={world.processed.chartSeries}
+          distance={world.distance}
+        />
+        {splits.length > 0 && (
+          <section
+            aria-label="Kilometer splits"
+            className="rounded-2xl border border-[#D8E1D8] bg-white/70 p-4"
+          >
+            <h3 className="font-bold text-[#19392C]">Kilometer splits</h3>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-[#65776C]">
+                    <th scope="col">Split</th>
+                    <th scope="col">Distance</th>
+                    <th scope="col">Moving time</th>
+                    <th scope="col">Moving pace</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {splits.map((split) => (
+                    <tr
+                      key={split.kilometer}
+                      className="border-t border-[#D8E1D8]"
+                    >
+                      <th scope="row" className="py-3 pr-2 font-medium">
+                        {split.kilometer}
+                        {split.partial ? ' (partial)' : ''}
+                      </th>
+                      <td>{metricLabel(split.distance / 1000, 'km', 2)}</td>
+                      <td>{durationLabel(split.duration)}</td>
+                      <td>{paceLabel(split.pace)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div>
     </section>
   );
 }

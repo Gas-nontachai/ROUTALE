@@ -50,6 +50,8 @@ describe('smart route analysis', () => {
     );
     expect(result.stats.duration).toBe(180);
     expect(result.stats.movingTime).toBe(120);
+    expect(result.stats.movingDistance).toBeCloseTo(200, 2);
+    expect(result.stats.averageMovingPace).toBeCloseTo(600, 0);
     expect(result.stats.averageSpeed).toBeCloseTo(200 / 180, 4);
     for (const points of [
       [p(0, 0, 0), p(100, 0), p(200, 0, 180)],
@@ -60,6 +62,21 @@ describe('smart route analysis', () => {
       expect(partial.stats.movingTime).toBeUndefined();
       expect(partial.stats.averageSpeed).toBeUndefined();
     }
+  });
+  it('keeps the source sensor values and creates distance-based chart samples', () => {
+    const parsed = parseGpx(
+      `<gpx xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><trkseg><trkpt lat="0" lon="0"><time>${new Date(origin).toISOString()}</time><extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>140</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></trkpt><trkpt lat="0" lon="0.001"><time>${new Date(origin + 100000).toISOString()}</time><ele>12</ele><extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>150</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></trkpt></trkseg></trk></gpx>`,
+    );
+    expect(parsed.segments[0][0].heartRate).toBe(140);
+    const analysis = analyzeRoute(parsed);
+    expect(analysis.series.heartRate.map((p) => p.value)).toEqual([
+      140,
+      undefined,
+      150,
+    ]);
+    expect(analysis.series.elevation.some((p) => p.value !== undefined)).toBe(
+      true,
+    );
   });
   it('counts all six laps in the combined demo next to a rest and out-and-back hike', () => {
     const world = createWorld(parseGpx(smartDemo));

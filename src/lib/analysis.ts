@@ -1,5 +1,9 @@
 import { meters, type Activity, type GPSPoint } from './route';
-export type RoutePoint = GPSPoint & { sourceIndex: number; distance: number };
+export type RoutePoint = GPSPoint & {
+  sourceIndex: number;
+  distance: number;
+  timestampMs?: number;
+};
 export type Movement = {
   type: 'stay' | 'loop' | 'backtracking';
   segment: number;
@@ -13,7 +17,23 @@ export type RouteStats = {
   distance: number;
   duration?: number;
   movingTime?: number;
+  movingDistance?: number;
+  averageMovingPace?: number;
+  elapsedPace?: number;
   averageSpeed?: number;
+  averageMovingSpeed?: number;
+  averageElapsedSpeed?: number;
+  elapsedTime?: number;
+  availability: Record<
+    'timing' | 'elevation' | 'moving',
+    { available: boolean; reason?: string }
+  >;
+  sensors: Partial<
+    Record<
+      'heartRate' | 'cadence' | 'power' | 'temperature',
+      { average?: number; max?: number; coverage: number; reason?: string }
+    >
+  >;
   ascent?: number;
   descent?: number;
   minElevation?: number;
@@ -22,12 +42,75 @@ export type RouteStats = {
   partialElevation: boolean;
   filteredPoints: number;
 };
+export type AnalysisSample = {
+  distance: number;
+  value?: number;
+  segmentIndex?: number;
+  sourceIndex?: number;
+  timestampMs?: number;
+  elapsedSeconds?: number;
+  edgeState?: 'moving' | 'stationary' | 'invalid' | 'unknown';
+};
+export function activityKind(type?: string) {
+  const value = type?.toLowerCase() ?? '';
+  return /cycl|bik/.test(value)
+    ? 'cycling'
+    : /trail.*run/.test(value)
+      ? 'trail-running'
+      : /run/.test(value)
+        ? 'running'
+        : /hik|trek/.test(value)
+          ? 'hiking'
+          : /walk/.test(value)
+            ? 'walking'
+            : 'unknown';
+}
+export type ActivitySeries = {
+  elevation: AnalysisSample[];
+  speed: AnalysisSample[];
+  pace: AnalysisSample[];
+  heartRate: AnalysisSample[];
+  cadence: AnalysisSample[];
+  power: AnalysisSample[];
+  gradient: AnalysisSample[];
+  temperature: AnalysisSample[];
+};
+export type DistanceSplit = {
+  kilometer: number;
+  distance: number;
+  partial: boolean;
+  movingDistance: number;
+  ascent?: number;
+  heartRate?: number;
+  duration?: number;
+  pace?: number;
+};
 export type ProcessedRoute = {
   segments: RoutePoint[][];
   movements: Movement[];
   stats: RouteStats;
+  series: ActivitySeries;
+  chartSeries: ActivitySeries;
+  splits: DistanceSplit[];
 };
-const time = (p: GPSPoint) => (p.time ? Date.parse(p.time) / 1000 : NaN);
+export function timestamp(value?: string): number {
+  if (
+    !value ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+      value,
+    )
+  )
+    return NaN;
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? Date.parse(value)
+    : NaN;
+}
+const time = (p: GPSPoint & { timestampMs?: number }) =>
+  (p.timestampMs ?? timestamp(p.time)) / 1000;
 const median = (values: number[]) =>
   values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
 function sample(segment: RoutePoint[], spacing: number) {
@@ -224,6 +307,44 @@ function detectMovement(
   }
   return movements.sort((a, b) => a.startIndex - b.startIndex);
 }
+// Keep bucket extrema and gap boundaries; source-resolution series remain available.
+export function chartSamples(
+  samples: AnalysisSample[],
+  budget = 1500,
+): AnalysisSample[] {
+  if (samples.length <= budget) return samples;
+  const result: AnalysisSample[] = [];
+  const size = Math.ceil(samples.length / (budget / 4));
+  for (let start = 0; start < samples.length; start += size) {
+    const end = Math.min(samples.length, start + size);
+    const keep = new Set([start, end - 1]);
+    let min = start,
+      max = start;
+    for (let i = start; i < end; i++) {
+      const value = samples[i].value;
+      if (value === undefined) {
+        if (i && samples[i - 1].value !== undefined) {
+          keep.add(i - 1);
+          keep.add(i);
+        }
+        if (i + 1 < samples.length && samples[i + 1].value !== undefined) {
+          keep.add(i);
+          keep.add(i + 1);
+        }
+      } else {
+        if (samples[min].value === undefined || value < samples[min].value!)
+          min = i;
+        if (samples[max].value === undefined || value > samples[max].value!)
+          max = i;
+      }
+    }
+    keep.add(min);
+    keep.add(max);
+    for (const i of [...keep].sort((a, b) => a - b))
+      if (result.at(-1) !== samples[i]) result.push(samples[i]);
+  }
+  return result;
+}
 export function analyzeRoute(activity: Activity): ProcessedRoute {
   let filteredPoints = 0,
     distance = 0,
@@ -236,7 +357,11 @@ export function analyzeRoute(activity: Activity): ProcessedRoute {
   const elevations: number[] = [];
   const segments = activity.segments.map((raw) => {
     const clean = raw
-      .map((p, sourceIndex) => ({ ...p, sourceIndex }))
+      .map((p, sourceIndex) => ({
+        ...p,
+        sourceIndex,
+        timestampMs: timestamp(p.time),
+      }))
       .filter((p, i) => {
         if (!i || i === raw.length - 1) return true;
         const a = raw[i - 1],
@@ -281,45 +406,333 @@ export function analyzeRoute(activity: Activity): ProcessedRoute {
       return { ...p, elevation, distance };
     });
   });
-  for (const segment of segments)
-    for (let i = 1; i < segment.length; i++) {
-      const a = segment[i - 1].elevation,
-        b = segment[i].elevation;
-      if (a === undefined || b === undefined) continue;
-      elevationEdges++;
-      ascent += Math.max(0, b - a);
-      descent += Math.max(0, a - b);
-    }
   const movements = segments.flatMap((s, i) => detectMovement(s, i));
-  // Only complete, monotonic timestamp coverage supports moving time and average speed.
-  let movingTime = 0;
+  const series: ActivitySeries = {
+    elevation: [],
+    speed: [],
+    pace: [],
+    heartRate: [],
+    cadence: [],
+    power: [],
+    gradient: [],
+    temperature: [],
+  };
+  const splits: DistanceSplit[] = [];
+  const invalidSplits = new Set<number>();
+  const stationaryCoverage = new Map<
+    number,
+    { time: number; hrTime: number; hrSum: number }
+  >();
+  const splitCoverage: {
+    known: number;
+    hrTime: number;
+    hrSum: number;
+    elevation: boolean;
+    recordedTime: number;
+  }[] = [];
+  const sensorTotals = Object.fromEntries(
+    ['heartRate', 'cadence', 'power', 'temperature'].map((key) => [
+      key,
+      { sum: 0, seconds: 0, count: 0, max: -Infinity },
+    ]),
+  );
+  let movingTime = 0,
+    movingDistance = 0;
+  const completeTime = timedEdges === edges && edges > 0;
+  const completeMovement =
+    completeTime &&
+    segments.every((segment) =>
+      segment.every((p, i) => !i || time(p) - time(segment[i - 1]) <= 300),
+    );
+  const all = segments.flat();
+  const presentSensors = new Set<keyof ActivitySeries>(
+    ['heartRate', 'cadence', 'power', 'temperature'].filter((key) =>
+      all.some((p) => p[key as keyof GPSPoint] !== undefined),
+    ) as (keyof ActivitySeries)[],
+  );
+  const chronological = all.every((p, i) => !i || time(p) >= time(all[i - 1]));
+  const elapsedTime =
+    completeTime && chronological
+      ? time(all.at(-1)!) - time(all[0])
+      : undefined;
   segments.forEach((segment, segmentIndex) => {
-    for (let i = 1; i < segment.length; i++) {
-      const dt = time(segment[i]) - time(segment[i - 1]);
-      const resting = movements.some(
-        (m) =>
-          m.type === 'stay' &&
-          m.segment === segmentIndex &&
-          i > m.startIndex &&
-          i <= m.endIndex,
-      );
-      if (
-        !resting &&
-        Number.isFinite(dt) &&
-        dt > 0 &&
-        meters(segment[i - 1], segment[i]) / dt >= 0.3
-      )
+    const resting = new Uint8Array(segment.length);
+    for (const m of movements)
+      if (m.segment === segmentIndex && m.type === 'stay')
+        resting.fill(1, m.startIndex + 1, m.endIndex + 1);
+    let elevationAnchor: number | undefined;
+    let gradeStart = 0,
+      speedStart = 0;
+    let windowDistance = 0,
+      windowTime = 0;
+    const edgeDistance = new Float64Array(segment.length);
+    const edgeTime = new Float64Array(segment.length);
+    for (let i = 0; i < segment.length; i++) {
+      const p = segment[i],
+        previous = segment[i - 1];
+      const edge = previous ? p.distance - previous.distance : 0;
+      const dt = previous ? time(p) - time(previous) : NaN;
+      const valid = Number.isFinite(dt) && dt > 0 && dt <= 300;
+      const moving =
+        valid && !resting[i] && edge / dt >= 0.3 && edge / dt <= 100;
+      if (moving) {
         movingTime += dt;
+        movingDistance += edge;
+      }
+      const add = (key: keyof ActivitySeries, value?: number) => {
+        if (
+          ['heartRate', 'cadence', 'power', 'temperature'].includes(key) &&
+          !presentSensors.has(key)
+        )
+          return;
+        if (!i && segmentIndex) series[key].push({ distance: p.distance });
+        series[key].push({
+          distance: p.distance,
+          value,
+          segmentIndex,
+          sourceIndex: p.sourceIndex,
+          timestampMs: Number.isFinite(time(p)) ? time(p) * 1000 : undefined,
+          elapsedSeconds:
+            Number.isFinite(time(p)) && Number.isFinite(time(all[0]))
+              ? time(p) - time(all[0])
+              : undefined,
+          edgeState:
+            !previous || !Number.isFinite(dt)
+              ? 'unknown'
+              : !valid
+                ? 'invalid'
+                : moving
+                  ? 'moving'
+                  : 'stationary',
+        });
+      };
+      let elevationDelta = 0;
+      if (p.elevation === undefined) {
+        elevationAnchor = undefined;
+        gradeStart = i + 1;
+      } else if (elevationAnchor === undefined) elevationAnchor = p.elevation;
+      else if (Math.abs(p.elevation - elevationAnchor) >= 3) {
+        elevationDelta = p.elevation - elevationAnchor;
+        ascent += Math.max(0, elevationDelta);
+        descent += Math.max(0, -elevationDelta);
+        elevationAnchor = p.elevation;
+      }
+      if (previous?.elevation !== undefined && p.elevation !== undefined)
+        elevationEdges++;
+      while (
+        gradeStart < i - 1 &&
+        p.distance - segment[gradeStart + 1].distance >= 30
+      )
+        gradeStart++;
+      const gradeDistance =
+        p.distance - (segment[gradeStart]?.distance ?? p.distance);
+      add(
+        'gradient',
+        gradeDistance >= 30 &&
+          p.elevation !== undefined &&
+          segment[gradeStart]?.elevation !== undefined
+          ? (100 * (p.elevation - segment[gradeStart].elevation!)) /
+              gradeDistance
+          : undefined,
+      );
+      add('elevation', p.elevation);
+      if (!moving) {
+        speedStart = i;
+        windowDistance = 0;
+        windowTime = 0;
+      } else {
+        edgeDistance[i] = edge;
+        edgeTime[i] = dt;
+        windowDistance += edge;
+        windowTime += dt;
+        while (
+          speedStart < i - 1 &&
+          windowDistance - edgeDistance[speedStart + 1] >= 50
+        ) {
+          speedStart++;
+          windowDistance -= edgeDistance[speedStart];
+          windowTime -= edgeTime[speedStart];
+        }
+      }
+      const speed =
+        moving && windowTime > 0 && windowDistance >= 30
+          ? windowDistance / windowTime
+          : undefined;
+      add('speed', speed === undefined ? undefined : speed * 3.6);
+      add('pace', speed === undefined ? undefined : 1000 / speed);
+      for (const key of [
+        'heartRate',
+        'cadence',
+        'power',
+        'temperature',
+      ] as const) {
+        const supported = key !== 'cadence' || p.cadenceType === 'cycling';
+        const powerSupported =
+          key !== 'power' || activityKind(activity.type) === 'cycling';
+        const value = supported && powerSupported ? p[key] : undefined;
+        if (
+          presentSensors.has(key) &&
+          previous &&
+          ((Number.isFinite(dt) && dt > 60) ||
+            ((p.time || previous.time) && !valid))
+        )
+          series[key].push({ distance: p.distance });
+        add(key, value);
+        const total = sensorTotals[key];
+        if (value !== undefined && Number.isFinite(value)) {
+          total.count++;
+          total.max = Math.max(total.max, value);
+          if (valid && dt <= 60 && previous?.[key] !== undefined) {
+            total.sum += ((previous[key]! + value) / 2) * dt;
+            total.seconds += dt;
+          }
+        }
+      }
+      if (previous && edge === 0 && distance > 0) {
+        const index = Math.min(
+          Math.floor(p.distance / 1000),
+          Math.ceil(distance / 1000) - 1,
+        );
+        if (!valid) invalidSplits.add(index);
+        else {
+          const coverage = stationaryCoverage.get(index) ?? {
+            time: 0,
+            hrTime: 0,
+            hrSum: 0,
+          };
+          coverage.time += dt;
+          if (
+            dt <= 60 &&
+            previous.heartRate !== undefined &&
+            p.heartRate !== undefined
+          ) {
+            coverage.hrTime += dt;
+            coverage.hrSum += ((previous.heartRate + p.heartRate) / 2) * dt;
+          }
+          stationaryCoverage.set(index, coverage);
+        }
+      }
+      let cursor = previous?.distance ?? p.distance;
+      while (cursor < p.distance) {
+        const index = Math.floor(cursor / 1000);
+        const boundary = Math.min(p.distance, (index + 1) * 1000);
+        const portion = boundary - cursor,
+          fraction = portion / edge;
+        const split = (splits[index] ??= {
+          kilometer: index + 1,
+          distance: 0,
+          partial: false,
+          movingDistance: 0,
+          duration: 0,
+        });
+        const coverage = (splitCoverage[index] ??= {
+          known: 0,
+          hrTime: 0,
+          hrSum: 0,
+          elevation: false,
+          recordedTime: 0,
+        });
+        split.distance += portion;
+        if (valid) {
+          coverage.known += portion;
+          coverage.recordedTime += dt * fraction;
+        }
+        if (moving) {
+          split.duration! += dt * fraction;
+          split.movingDistance += portion;
+        }
+        if (previous?.elevation !== undefined && p.elevation !== undefined) {
+          coverage.elevation = true;
+          split.ascent =
+            (split.ascent ?? 0) + Math.max(0, elevationDelta) * fraction;
+        }
+        if (
+          valid &&
+          dt <= 60 &&
+          previous?.heartRate !== undefined &&
+          p.heartRate !== undefined
+        ) {
+          coverage.hrTime += dt * fraction;
+          coverage.hrSum +=
+            ((previous.heartRate + p.heartRate) / 2) * dt * fraction;
+        }
+        cursor = boundary;
+      }
     }
   });
-  const completeTime = timedEdges === edges && edges > 0;
+  splits.forEach((split, i) => {
+    const coverage = splitCoverage[i];
+    const stationary = stationaryCoverage.get(i);
+    if (stationary) {
+      coverage.recordedTime += stationary.time;
+      coverage.hrTime += stationary.hrTime;
+      coverage.hrSum += stationary.hrSum;
+    }
+    split.partial = split.distance < 999.99;
+    if (invalidSplits.has(i) || coverage.known < split.distance - 0.001)
+      split.duration = undefined;
+    if (
+      split.duration !== undefined &&
+      split.duration > 0 &&
+      split.movingDistance > 0
+    )
+      split.pace = split.duration / (split.movingDistance / 1000);
+    if (
+      coverage.recordedTime > 0 &&
+      coverage.hrTime / coverage.recordedTime >= 0.8
+    )
+      split.heartRate = coverage.hrSum / coverage.hrTime;
+  });
+  const sensors: RouteStats['sensors'] = {};
+  for (const key of ['heartRate', 'cadence', 'power', 'temperature'] as const) {
+    const total = sensorTotals[key];
+    const coverage = duration > 0 ? total.seconds / duration : 0;
+    sensors[key] = {
+      coverage,
+      max: total.count ? total.max : undefined,
+      average:
+        completeTime && coverage >= 0.8 && total.count >= 2
+          ? total.sum / total.seconds
+          : undefined,
+      reason: !total.count
+        ? 'missing-data'
+        : !completeTime || coverage < 0.8
+          ? 'insufficient-coverage'
+          : undefined,
+    };
+  }
+  const chartSeries = Object.fromEntries(
+    Object.entries(series).map(([key, samples]) => [
+      key,
+      chartSamples(samples),
+    ]),
+  ) as ActivitySeries;
   return {
     segments,
     movements,
+    series,
+    chartSeries,
+    splits,
     stats: {
       distance,
       duration: timedEdges ? duration : undefined,
-      movingTime: completeTime ? movingTime : undefined,
+      elapsedTime,
+      movingTime: completeMovement ? movingTime : undefined,
+      movingDistance: completeMovement ? movingDistance : undefined,
+      averageMovingPace:
+        completeMovement && movingDistance > 0 && movingTime > 0
+          ? movingTime / (movingDistance / 1000)
+          : undefined,
+      averageMovingSpeed:
+        completeMovement && movingTime > 0
+          ? movingDistance / movingTime
+          : undefined,
+      elapsedPace:
+        elapsedTime && distance > 0
+          ? elapsedTime / (distance / 1000)
+          : undefined,
+      averageElapsedSpeed:
+        elapsedTime && distance > 0 ? distance / elapsedTime : undefined,
       averageSpeed:
         completeTime && duration > 0 ? distance / duration : undefined,
       ascent: elevationEdges ? ascent : undefined,
@@ -330,10 +743,36 @@ export function analyzeRoute(activity: Activity): ProcessedRoute {
       maxElevation: elevations.length
         ? elevations.reduce((a, b) => Math.max(a, b), -Infinity)
         : undefined,
-      partialTime: timedEdges < edges,
-      partialElevation:
-        elevations.length < segments.reduce((n, s) => n + s.length, 0),
+      partialTime: !completeTime,
+      partialElevation: elevations.length < all.length,
       filteredPoints,
+      sensors,
+      availability: {
+        timing: {
+          available: completeTime,
+          reason: completeTime
+            ? undefined
+            : timedEdges
+              ? 'insufficient-coverage'
+              : 'missing-data',
+        },
+        elevation: {
+          available: elevationEdges > 0,
+          reason: elevationEdges
+            ? undefined
+            : elevations.length
+              ? 'insufficient-coverage'
+              : 'missing-data',
+        },
+        moving: {
+          available: completeMovement && movingTime > 0,
+          reason: !completeMovement
+            ? 'insufficient-coverage'
+            : movingTime <= 0
+              ? 'insufficient-duration'
+              : undefined,
+        },
+      },
     },
   };
 }

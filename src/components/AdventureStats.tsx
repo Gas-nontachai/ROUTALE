@@ -4,7 +4,8 @@ const value = (n: number | undefined, suffix = ' m') =>
     ? 'Not available'
     : `${Math.round(n).toLocaleString()}${suffix}`;
 export function durationLabel(seconds: number | undefined) {
-  if (seconds === undefined) return 'Not available';
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0)
+    return 'Not available';
   const h = Math.floor(seconds / 3600),
     m = Math.floor((seconds % 3600) / 60),
     s = Math.floor(seconds % 60);
@@ -43,7 +44,7 @@ export function AdventureStats({
           ['Recorded duration', durationLabel(stats.duration)],
           ['Moving time', durationLabel(stats.movingTime)],
           [
-            'Average speed',
+            'Recorded avg. speed',
             stats.averageSpeed === undefined
               ? 'Not available'
               : `${(stats.averageSpeed * 3.6).toFixed(1)} km/h`,
