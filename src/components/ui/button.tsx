@@ -15,7 +15,12 @@ const buttonVariants = cva(
           'bg-transparent px-4 py-[11px] text-[#234e36] disabled:opacity-40',
         unstyled: '',
       },
-      size: { default: '', icon: 'size-[43px] p-[10px]' },
+      size: {
+        default: '',
+        sm: 'h-9 px-3 text-xs',
+        lg: 'h-11 px-6 text-sm',
+        icon: 'size-[43px] p-[10px]',
+      },
     },
     defaultVariants: { variant: 'default', size: 'default' },
   },

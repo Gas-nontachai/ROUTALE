@@ -138,7 +138,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button
-            variant="unstyled"
+            variant="ghost"
+            size="icon"
             type="button"
             onClick={() => {
               simulation.pause();
@@ -146,7 +147,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             }}
             aria-label="Back to your trail"
             title="Back to your trail"
-            className="grid size-9 shrink-0 place-items-center rounded-lg !text-[#244638] transition hover:!bg-[#E6EFE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#367047]"
+            className="shrink-0 rounded-lg !text-[#244638] hover:!bg-[#E6EFE6] focus-visible:ring-[#367047]"
           >
             <ChevronLeft size={22} />
           </Button>
@@ -177,10 +178,11 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         </div>
         {isCompleted && (
           <Button
-            variant="unstyled"
+            variant="outline"
+            size="sm"
             type="button"
             onClick={togglePlayback}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            className="min-h-11 shrink-0"
           >
             <RotateCcw size={17} />
             {'Replay'}
