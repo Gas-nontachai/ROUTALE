@@ -252,7 +252,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       }),
     });
     const element = document.createElement('div');
-    element.className = 'route-character-marker';
+    element.className =
+      'grid h-[38px] w-7 place-items-center border-0 bg-transparent shadow-none [&_svg]:block [&_svg]:drop-shadow-[0_2px_2px_#173b3277] [&_.left-leg]:[transform:translateY(var(--stride,0px))] [&_.right-leg]:[transform:translateY(calc(-1*var(--stride,0px)))] [&_.side-face]:hidden [&_.back-view]:hidden [&[data-facing=back]_.front-face]:hidden [&[data-facing=left]_.front-face]:hidden [&[data-facing=right]_.front-face]:hidden [&[data-facing=back]_.back-view]:[display:initial] [&[data-facing=left]_.side-face]:[display:initial] [&[data-facing=right]_.side-face]:[display:initial] [&[data-facing=left]_svg]:scale-x-[-1]';
     element.setAttribute('role', 'img');
     element.setAttribute('aria-label', 'Traveler on the route');
     element.innerHTML =
@@ -704,7 +705,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   }, [engine, world]);
   return (
     <div
-      className="route-map"
+      className="absolute inset-0 overflow-hidden bg-[#dfe6de] [&.maplibregl-map]:absolute"
       ref={host}
       aria-label={
         status === 'Completed'
@@ -713,12 +714,18 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       }
     >
       {!ready && (
-        <div className="map-loading" role="status">
+        <div
+          className="absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 bg-[#fffdf2ed] px-4 py-3 text-xs text-[#334c3e]"
+          role="status"
+        >
           {message}
         </div>
       )}
       {styleError && (
-        <p className="map-style-error" role="status">
+        <p
+          className="absolute bottom-3 left-3 z-[3] bg-red-50 px-3 py-2 text-xs text-red-800 shadow"
+          role="status"
+        >
           {styleError}
         </p>
       )}

@@ -215,7 +215,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
           <div
             ref={summaryContainer}
-            className="invisible absolute inset-0 z-20 overflow-y-auto bg-[#F7F8F3] opacity-0"
+            className="invisible absolute inset-0 z-20 overflow-y-auto bg-[#F7F8F3] opacity-0 [transition:opacity_300ms,transform_300ms] motion-reduce:[transition:none]"
             aria-label="Journey summary"
             inert
           >
