@@ -13,6 +13,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  BarChart3,
 } from 'lucide-react';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
@@ -148,50 +149,40 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             <ArrowLeft size={22} />
           </button>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            {/* Activity name & type */}
-            <div className="flex min-w-0 items-baseline gap-2">
-              <h1 className="min-w-0 truncate text-xl font-extrabold tracking-tight !text-[#19392C] sm:text-2xl">
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
+            {/* Left: Activity name & type */}
+            <div className="flex min-w-0 items-baseline gap-3">
+              <h1 className="min-w-0 truncate text-2xl font-extrabold leading-none tracking-tight !text-[#19392C] sm:text-3xl">
                 {activity.name}
               </h1>
+
               <ActivityTypeBadge type={activity.type} />
             </div>
 
-            {/* Activity stats */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs !text-[#52665C]">
-              <span className="inline-flex items-center gap-1">
-                <Footprints size={14} />
+            {/* Right: Activity stats */}
+            <div className="flex shrink-0 items-center gap-5 text-sm font-medium leading-none !text-[#52665C]">
+              <span className="inline-flex items-center gap-1.5">
+                <Footprints size={16} />
                 {km(world.processed.stats.distance ?? activity.distance)}
               </span>
 
-              <span className="inline-flex items-center gap-1">
-                <Mountain size={14} />
+              <span className="inline-flex items-center gap-1.5">
+                <Mountain size={16} />
                 {ascent === undefined ? '—' : `${Math.round(ascent)} m`} gain
               </span>
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={togglePlayback}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
-        >
-          {isCompleted ? (
+        {isCompleted && (
+          <button
+            type="button"
+            onClick={togglePlayback}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+          >
             <RotateCcw size={17} />
-          ) : isPlaying ? (
-            <Pause size={17} />
-          ) : (
-            <Play size={17} fill="currentColor" />
-          )}
-
-          {isCompleted
-            ? 'Replay Simulation'
-            : isPlaying
-              ? 'Pause'
-              : isReady
-                ? 'Start Simulation'
-                : 'Resume Simulation'}
-        </button>
+            {'Replay Simulation'}
+          </button>
+        )}
       </header>
 
       {/* Fill the remaining viewport height with the map. */}
@@ -248,52 +239,35 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         </section>
       </div>
 
-      {/* Playback controls: do not show while the Summary View is active. */}
       {!isCompleted && (
         <section
           aria-label="Playback controls"
-          className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm sm:p-4"
+          className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm"
         >
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full items-center gap-3">
             {/* Play / Pause */}
             <button
               type="button"
               onClick={togglePlayback}
-              disabled={isCompleted}
               aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
-              className="grid size-11 shrink-0 place-items-center rounded-full bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] disabled:cursor-not-allowed disabled:opacity-50"
+              className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
             >
               {isPlaying ? (
-                <Pause size={21} />
+                <Pause size={20} />
               ) : (
-                <Play size={21} fill="currentColor" />
+                <Play size={20} fill="currentColor" />
               )}
             </button>
 
             {/* Time */}
-            <span className="shrink-0 text-sm font-medium tabular-nums">
-              {time(simulation.elapsed)} / {time(world.duration)}
+            <span className="shrink-0 whitespace-nowrap text-sm font-medium tabular-nums">
+              {time(simulation.elapsed)}
+              <span className="mx-1 text-[#87947B]">/</span>
+              {time(world.duration)}
             </span>
 
-            {/* Speed toggle */}
-            <button
-              type="button"
-              aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
-              title="Change playback speed"
-              onClick={() => {
-                const speeds = [0.5, 1, 2, 4, 8];
-                const currentIndex = speeds.indexOf(simulation.speed);
-                const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
-
-                simulation.setSpeed(nextSpeed);
-              }}
-              className="inline-flex h-9 min-w-14 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-[#F0F7F1] px-3 text-xs font-bold text-[#356B42] tabular-nums transition-colors hover:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42] active:bg-[#D5E7D8]"
-            >
-              {simulation.speed}x
-            </button>
-
-            {/* Timeline + Progress */}
-            <div className="order-last flex w-full min-w-0 items-center gap-3 sm:order-none sm:w-auto sm:flex-1">
+            {/* Timeline */}
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <input
                 type="range"
                 aria-label="Seek route timeline"
@@ -308,35 +282,37 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 onChange={(event) =>
                   simulation.seek(Number(event.target.value))
                 }
-                className="h-2 w-full min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-2 min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
               />
 
-              <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">
+              <span className="w-10 shrink-0 text-right text-xs font-medium text-[#65776C] tabular-nums">
                 {progress.toFixed(0)}%
               </span>
             </div>
 
-            {/* Actions */}
-            <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
-              <button
-                type="button"
-                aria-label="Restart adventure"
-                title="Restart adventure"
-                onClick={() => simulation.restart()}
-                className={control}
-              >
-                <RotateCcw size={17} />
-              </button>
+            {/* Speed */}
+            <button
+              type="button"
+              aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
+              title="Change playback speed"
+              onClick={() => {
+                const speeds = [0.5, 1, 2, 4, 8];
+                const index = speeds.indexOf(simulation.speed);
+                simulation.setSpeed(speeds[(index + 1) % speeds.length]);
+              }}
+              className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#D5E4D8] bg-white text-sm font-semibold text-[#356B42] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
+            >
+              {simulation.speed}x
+            </button>
 
-              <button
-                type="button"
-                onClick={() => simulation.showSummary()}
-                disabled={isCompleted}
-                className={control}
-              >
-                Summary
-              </button>
-            </div>
+            {/* Summary */}
+            <button
+              type="button"
+              onClick={() => simulation.showSummary()}
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-white px-4 text-sm font-medium text-[#233B31] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
+            >
+              Summary
+            </button>
           </div>
         </section>
       )}

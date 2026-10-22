@@ -32,6 +32,7 @@ export function SummaryMap({ world }: { world: World }) {
       zoom: 11,
       interactive: false,
       fadeDuration: 0,
+      attributionControl: false,
     });
     mapRef.current = map;
     const bounds = new maplibregl.LngLatBounds(

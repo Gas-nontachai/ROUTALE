@@ -94,6 +94,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         minZoom: motionProfile.minZoom,
         maxZoom: motionProfile.maxZoom,
         canvasContextAttributes: { antialias: true },
+        attributionControl: false,
       });
     } catch {
       setMessage(

@@ -79,7 +79,6 @@ a {
 button svg {
   flex-shrink: 0;
 }
-h1,
 h2,
 p {
   margin: 0;
@@ -169,18 +168,6 @@ p {
   height: 5px;
   width: 5px;
   background: #9baf75;
-}
-h1 {
-  font-family: var(--font-trailbound);
-  font-size: 46px;
-  line-height: 1.22;
-  font-weight: 700;
-  letter-spacing: -2.6px;
-  margin: 17px 0 15px;
-}
-h1 em {
-  font-style: normal;
-  color: #778a4c;
 }
 .page-heading p {
   font-size: 14px;
@@ -1119,9 +1106,6 @@ progress::-moz-progress-bar {
   .page-heading {
     margin-bottom: 45px;
   }
-  h1 {
-    font-size: 52px;
-  }
   .adventure-layout {
     max-width: 760px;
   }
@@ -1204,10 +1188,6 @@ progress::-moz-progress-bar {
   }
   .text-button {
     font-size: 10px;
-  }
-  h1 {
-    font-size: 36px;
-    letter-spacing: -2px;
   }
   .page-heading p {
     font-size: 12px;

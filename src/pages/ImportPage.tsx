@@ -251,7 +251,7 @@ export function ImportPage({ onPreview }: ImportPageProps) {
               }}
             />
             <span className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA991]">
-              .GPX files · Up to 25 MB
+              .GPX files
             </span>
           </div>
 
