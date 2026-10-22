@@ -705,7 +705,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   }, [engine, world]);
   return (
     <div
-      className="absolute inset-0 overflow-hidden bg-[#dfe6de] [&.maplibregl-map]:absolute"
+      className="size-full overflow-hidden bg-[#dfe6de]"
       ref={host}
       aria-label={
         status === 'Completed'
