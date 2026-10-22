@@ -60,6 +60,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
   const { world } = useWorldStore();
   const simulation = useSimulationStore();
   const engine = useJourney(world, true);
+  const headerContainer = useRef<HTMLElement>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const summaryContainer = useRef<HTMLDivElement>(null);
 
@@ -67,8 +68,10 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
     if (!engine) return;
     return engine.subscribe((frame) => {
       const map = mapContainer.current;
+      const header = headerContainer.current;
       const summary = summaryContainer.current;
       const view = completionPresentation(frame.completionProgress);
+      if (header) header.style.display = view.summary ? 'none' : '';
       if (map) {
         map.style.opacity = String(view.opacity);
         map.style.visibility =
@@ -123,7 +126,10 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto bg-canvas text-foreground lg:overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1">
+      <header
+        ref={headerContainer}
+        className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1"
+      >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button
             variant="ghost"
