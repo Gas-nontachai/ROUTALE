@@ -31,3 +31,101 @@
   font-weight: 700;
   font-display: swap;
 }
+
+@theme inline {
+  --font-sans: 'Kanit', ui-sans-serif, system-ui, sans-serif;
+  --color-canvas: var(--ui-canvas);
+  --color-surface: var(--ui-surface);
+  --color-surface-muted: var(--ui-surface-muted);
+  --color-foreground: var(--ui-foreground);
+  --color-muted: var(--ui-muted);
+  --color-line: var(--ui-line);
+  --color-primary: var(--ui-primary);
+  --color-primary-hover: var(--ui-primary-hover);
+  --color-on-primary: var(--ui-on-primary);
+  --color-accent: var(--ui-accent);
+  --color-accent-foreground: var(--ui-accent-foreground);
+  --color-danger: var(--ui-danger);
+  --color-danger-surface: var(--ui-danger-surface);
+}
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --ui-canvas: #f7f8f3;
+  --ui-surface: #ffffff;
+  --ui-surface-muted: #edf2e8;
+  --ui-foreground: #19392c;
+  --ui-muted: #52665a;
+  --ui-line: #cbd6c6;
+  --ui-primary: #18543d;
+  --ui-primary-hover: #124632;
+  --ui-on-primary: #ffffff;
+  --ui-accent: #e2eedb;
+  --ui-accent-foreground: #285a3a;
+  --ui-danger: #a51d1d;
+  --ui-danger-surface: #fee7e5;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --ui-canvas: #14231c;
+  --ui-surface: #1c3026;
+  --ui-surface-muted: #253d30;
+  --ui-foreground: #edf4e8;
+  --ui-muted: #b4c5b5;
+  --ui-line: #49614f;
+  --ui-primary: #a5d886;
+  --ui-primary-hover: #bce69f;
+  --ui-on-primary: #183426;
+  --ui-accent: #304e37;
+  --ui-accent-foreground: #c5e7b2;
+  --ui-danger: #ffb4aa;
+  --ui-danger-surface: #4a2828;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--ui-canvas);
+    color: var(--ui-foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+  button:not(:disabled),
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  :where(a, button, input, select, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 3px;
+  }
+  input[type='range'],
+  input[type='checkbox'] {
+    accent-color: var(--ui-primary);
+  }
+}
+
+@layer components {
+  .ui-panel {
+    @apply rounded-xl border border-line bg-surface p-4 sm:p-5;
+  }
+  .ui-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+  .ui-notice {
+    @apply rounded-lg border border-line bg-surface-muted px-4 py-3 text-sm leading-relaxed text-muted;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

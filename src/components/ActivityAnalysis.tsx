@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Button } from './ui/button';
 import {
   Area,
   AreaChart,
@@ -69,18 +70,17 @@ export function ActivityAnalysis({
           : p.value,
   }));
   return (
-    <section
-      className="rounded-2xl border border-[#D8E1D8] bg-white/70 p-4 sm:p-5"
-      aria-label="Activity analysis"
-    >
-      <h2 className="text-lg font-bold text-[#19392C]">Activity analysis</h2>
+    <section className="ui-panel" aria-label="Activity analysis">
+      <h2 className="text-lg font-bold text-foreground">Activity analysis</h2>
       <div
         className="mt-3 flex flex-wrap gap-2"
         role="tablist"
         aria-label="Analysis metric"
       >
         {available.map((item) => (
-          <button
+          <Button
+            variant={metric.key === item.key ? 'primary' : 'soft'}
+            size="sm"
             key={item.key}
             type="button"
             role="tab"
@@ -106,10 +106,10 @@ export function ActivityAnalysis({
               document.getElementById(`${id}-${available[next].key}`)?.focus();
             }}
             onClick={() => setSelected(item.key)}
-            className={`min-h-11 rounded-full px-4 text-sm ${metric.key === item.key ? 'bg-[#19392C] text-white' : 'bg-[#edf1e9] text-[#385343]'}`}
+            className="rounded-lg"
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </div>
       <div
@@ -138,21 +138,29 @@ export function ActivityAnalysis({
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
-              stroke="#dce4da"
+              stroke="var(--ui-line)"
             />
             <XAxis
               type="number"
               dataKey="distance"
               domain={[0, distance]}
               tickFormatter={(v) => `${(v / 1000).toFixed(1)}`}
-              tick={{ fontSize: 11, fill: '#65776C' }}
+              tick={{ fontSize: 12, fill: 'var(--ui-muted)' }}
             />
             <YAxis
               unit={` ${metric.unit}`}
               width={65}
-              tick={{ fontSize: 11, fill: '#65776C' }}
+              tick={{ fontSize: 12, fill: 'var(--ui-muted)' }}
             />
             <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--ui-surface)',
+                border: '1px solid var(--ui-line)',
+                borderRadius: 8,
+                color: 'var(--ui-foreground)',
+              }}
+              labelStyle={{ color: 'var(--ui-muted)' }}
+              itemStyle={{ color: 'var(--ui-foreground)' }}
               labelFormatter={(v) => `${(Number(v) / 1000).toFixed(2)} km`}
               formatter={(v) => [
                 v == null
@@ -175,11 +183,11 @@ export function ActivityAnalysis({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-xs text-[#65776C]">
+      <p className="mt-2 text-xs text-muted">
         Hover or touch to inspect. Focus the chart and use arrow keys to explore
         recorded samples. Gaps indicate unavailable data.
       </p>
-      <p className="text-center text-xs text-[#65776C]">Distance (km)</p>
+      <p className="text-center text-xs text-muted">Distance (km)</p>
     </section>
   );
 }

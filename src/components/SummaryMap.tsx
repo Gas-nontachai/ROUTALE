@@ -133,7 +133,7 @@ export function SummaryMap({ world }: { world: World }) {
 
   return (
     <div className="flex h-full min-h-[240px] w-full flex-col gap-1">
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-[#E9EEE7]">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface-muted">
         <div
           ref={elementRef}
           className="absolute inset-0"
@@ -142,17 +142,17 @@ export function SummaryMap({ world }: { world: World }) {
           role="img"
         />
         {!coordinates.some((segment) => segment.length >= 2) && (
-          <div className="absolute inset-0 grid place-items-center px-5 text-center text-sm text-stone-600">
+          <div className="absolute inset-0 grid place-items-center px-5 text-center text-sm text-muted">
             Route coordinates unavailable.
           </div>
         )}
         {error && (
-          <div className="absolute left-3 top-3 rounded bg-white/90 p-2 text-xs">
+          <div className="absolute left-3 top-3 rounded bg-surface p-2 text-xs">
             {error}
           </div>
         )}
       </div>
-      <p className="text-right text-[10px] text-[#65776C]">
+      <p className="text-right text-xs text-muted">
         <a href="https://openfreemap.org/" target="_blank" rel="noreferrer">
           OpenFreeMap
         </a>

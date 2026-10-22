@@ -13,7 +13,6 @@ import {
   Pause,
   Play,
   RotateCcw,
-  BarChart3,
 } from 'lucide-react';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
@@ -39,9 +38,6 @@ const time = (seconds: number) => {
     : `${mins}:${String(secs).padStart(2, '0')}`;
 };
 
-const control =
-  'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700';
-
 class MapBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -54,7 +50,7 @@ class MapBoundary extends Component<
     return this.state.failed ? (
       <div
         role="alert"
-        className="grid h-full place-items-center bg-stone-100 p-6 text-center text-sm text-stone-600"
+        className="grid h-full place-items-center bg-surface-muted p-6 text-center text-sm text-muted"
       >
         Map unavailable. Playback controls are still available.
       </div>
@@ -134,7 +130,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto !bg-[#F7F8F3] !text-[#20372F] lg:overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto bg-canvas text-foreground lg:overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-1 py-1">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button
@@ -155,7 +151,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3">
             {/* Left: Activity name & type */}
             <div className="flex min-w-0 flex-wrap items-baseline gap-3">
-              <h1 className="min-w-0 truncate text-2xl font-extrabold leading-none tracking-tight !text-[#19392C] sm:text-3xl">
+              <h1 className="min-w-0 truncate text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl">
                 {activity.name}
               </h1>
 
@@ -163,7 +159,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             </div>
 
             {/* Right: Activity stats */}
-            <div className="flex shrink-0 items-center gap-5 text-sm font-medium leading-none !text-[#52665C]">
+            <div className="flex shrink-0 items-center gap-5 text-sm font-medium leading-none text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Footprints size={16} />
                 {km(world.processed.stats.distance ?? activity.distance)}
@@ -182,7 +178,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             size="sm"
             type="button"
             onClick={togglePlayback}
-            className="shrink-0"
+            className="hidden shrink-0 sm:inline-flex"
           >
             <RotateCcw size={17} />
             {'Replay'}
@@ -191,10 +187,10 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       </header>
 
       {/* Fill the remaining viewport height with the map. */}
-      <div className="min-h-[360px] shrink-0 sm:min-h-[420px] lg:min-h-0 lg:flex-1">
+      <div className="min-h-[240px] flex-1 lg:min-h-0">
         <section
           aria-label="3D journey map"
-          className="relative h-full min-h-[360px] min-w-0 overflow-hidden rounded-xl border border-[#DBE4D9] bg-[#E9EEE7] shadow-sm lg:min-h-0"
+          className="relative h-full min-h-[240px] min-w-0 overflow-hidden rounded-xl border border-line bg-surface-muted shadow-sm lg:min-h-0"
         >
           <div
             ref={mapContainer}
@@ -205,7 +201,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 fallback={
                   <div
                     role="status"
-                    className="grid h-full place-items-center text-sm text-stone-600"
+                    className="grid h-full place-items-center text-sm text-muted"
                   >
                     Loading map engine…
                   </div>
@@ -217,7 +213,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
           <div
             ref={summaryContainer}
-            className="invisible absolute inset-0 z-20 overflow-y-auto bg-[#F7F8F3] opacity-0 [transition:opacity_300ms,transform_300ms] motion-reduce:[transition:none]"
+            className="invisible absolute inset-0 z-20 overflow-y-auto bg-canvas opacity-0 [transition:opacity_300ms,transform_300ms] motion-reduce:[transition:none]"
             aria-label="Journey summary"
             inert
           >
@@ -231,15 +227,13 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
-              <div className="flex items-center gap-3 rounded-xl px-3 py-2 sm:px-4 sm:py-3">
+              <div className="flex items-center gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2 text-foreground shadow-sm sm:px-4 sm:py-3">
                 <Footprints size={26} className="shrink-0" />
                 <div>
-                  <p className="text-[11px] font-medium !text-[#65776C]">
-                    Distance
-                  </p>
-                  <strong className="text-lg font-bold leading-tight !text-[#19392C] sm:text-xl">
+                  <p className="text-xs font-medium text-muted">Distance</p>
+                  <strong className="text-lg font-bold leading-tight text-foreground sm:text-xl">
                     {km(simulation.distance)}
-                    <span className="ml-1 text-xs font-normal !text-[#65776C]">
+                    <span className="ml-1 text-xs font-normal text-muted">
                       / {km(world.distance)}
                     </span>
                   </strong>
@@ -253,9 +247,9 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       {!isCompleted && (
         <section
           aria-label="Playback controls"
-          className="shrink-0 rounded-xl border border-[#DEE6DB] bg-white p-3 text-[#233B31] shadow-sm"
+          className="shrink-0 rounded-xl border border-line bg-surface p-3 text-foreground shadow-sm"
         >
-          <div className="flex w-full items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3">
             {/* Play / Pause */}
             <Button
               variant="primary"
@@ -275,12 +269,12 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             {/* Time */}
             <span className="shrink-0 whitespace-nowrap text-sm font-medium tabular-nums">
               {time(simulation.elapsed)}
-              <span className="mx-1 text-[#87947B]">/</span>
+              <span className="mx-1 text-muted">/</span>
               {time(world.duration)}
             </span>
 
             {/* Timeline */}
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="order-last flex min-w-0 basis-full items-center gap-3 sm:order-none sm:flex-1 sm:basis-auto">
               <input
                 type="range"
                 aria-label="Seek route timeline"
@@ -295,10 +289,10 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 onChange={(event) =>
                   simulation.seek(Number(event.target.value))
                 }
-                className="h-2 min-w-0 flex-1 cursor-pointer accent-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-11 min-w-0 flex-1 cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-50"
               />
 
-              <span className="w-10 shrink-0 text-right text-xs font-medium text-[#65776C] tabular-nums">
+              <span className="w-10 shrink-0 text-right text-xs font-medium text-muted tabular-nums">
                 {progress.toFixed(0)}%
               </span>
             </div>
@@ -325,8 +319,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               variant="outline"
               type="button"
               onClick={() => simulation.showSummary()}
-              size="lg"
-              className="shrink-0"
+              className="ml-auto shrink-0 sm:ml-0"
             >
               Summary
             </Button>

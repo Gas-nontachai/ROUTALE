@@ -17,7 +17,10 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden">
+    <div
+      data-theme={isDark ? 'dark' : 'light'}
+      className="flex h-dvh w-full flex-col overflow-hidden bg-canvas text-foreground"
+    >
       <div className="shrink-0">
         <Navbar
           isDark={isDark}
@@ -25,7 +28,17 @@ export default function App() {
         />
       </div>
 
-      <main className="min-h-0 w-full flex-1 overflow-hidden p-2">
+      <a
+        href="#main-content"
+        className="sr-only z-[60] rounded-lg bg-surface p-3 text-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to content
+      </a>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden p-3 sm:p-4 lg:px-6"
+      >
         {screen === 'import' ? (
           <ImportPage onPreview={() => setScreen('world')} />
         ) : (

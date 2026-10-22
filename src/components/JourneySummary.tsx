@@ -84,13 +84,23 @@ export function summaryMetrics(world: World, type?: string) {
     secondary: secondary.filter(([, value]) => value !== 'Not available'),
   };
 }
-function Metrics({ items }: { items: Metric[] }) {
+function Metrics({
+  items,
+  primary = false,
+}: {
+  items: Metric[];
+  primary?: boolean;
+}) {
   return (
-    <dl className="grid grid-cols-3 gap-x-3 gap-y-5">
+    <dl
+      className={`grid gap-x-4 gap-y-5 ${primary ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-2'}`}
+    >
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0">
-          <dt className="text-xs font-medium text-[#65776C]">{label}</dt>
-          <dd className="mt-1 break-words text-lg font-bold text-[#19392C] sm:text-2xl">
+          <dt className="text-xs font-medium text-muted">{label}</dt>
+          <dd
+            className={`mt-1 break-words font-semibold tabular-nums text-foreground ${primary ? 'text-xl sm:text-3xl' : 'text-base sm:text-lg'}`}
+          >
             {value}
           </dd>
         </div>
@@ -112,23 +122,21 @@ export function JourneySummary({
   const date = timestamp(activity?.recordedAt ?? activity?.segments[0][0].time);
   return (
     <section
-      className="flex min-w-0 flex-col gap-5 bg-[#F7F8F3] p-4 sm:p-6"
+      className="flex min-w-0 flex-col gap-5 bg-canvas p-4 sm:p-6"
       aria-label="Activity summary"
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#65776C]">
-            The real journey
-          </p>
+          <p className="ui-eyebrow">The real journey</p>
           <h2
             tabIndex={-1}
-            className="break-words text-2xl font-bold text-[#19392C]"
+            className="break-words text-2xl font-bold text-foreground"
           >
             {activity?.name ?? 'Activity summary'}
           </h2>
           <ActivityTypeBadge type={activity?.type} />
           {Number.isFinite(date) && (
-            <p className="mt-2 text-sm text-[#65776C]">
+            <p className="mt-2 text-sm text-muted">
               {new Date(date).toLocaleString('en', {
                 dateStyle: 'medium',
                 timeStyle: 'short',
@@ -138,8 +146,8 @@ export function JourneySummary({
         </div>
         {onReplay && <Button onClick={onReplay}>Replay Adventure</Button>}
       </header>
-      <div className="order-2 border-b border-[#D8E1D8] pb-5 lg:order-none">
-        <Metrics items={primary} />
+      <div className="order-2 border-b border-line pb-5 lg:order-none">
+        <Metrics items={primary} primary />
       </div>
       <div className="contents lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:gap-6">
         <div className="order-1 h-[280px] min-w-0 sm:h-[360px] lg:order-none">
@@ -151,19 +159,19 @@ export function JourneySummary({
       </div>
       <div className="order-4 space-y-4">
         {activity?.unsupportedExtensions && (
-          <p className="text-sm text-[#65776C]">
+          <p className="ui-notice">
             Unsupported GPX extensions were ignored; only recognized sensor
             schemas are analyzed.
           </p>
         )}
         {!stats.availability.moving.available && !stats.partialTime && (
-          <p className="text-sm text-[#65776C]">
+          <p className="ui-notice">
             Insufficient verified movement: long recording gaps or stationary
             intervals cannot establish an average moving pace or speed.
           </p>
         )}
         {stats.partialTime && (
-          <p className="text-sm text-[#65776C]">
+          <p className="ui-notice">
             {stats.duration === undefined
               ? 'No valid timestamps.'
               : 'Partial or invalid timestamps.'}{' '}
@@ -172,12 +180,10 @@ export function JourneySummary({
           </p>
         )}
         {stats.ascent === undefined ? (
-          <p className="text-sm text-[#65776C]">
-            No continuous elevation recorded.
-          </p>
+          <p className="ui-notice">No continuous elevation recorded.</p>
         ) : (
           stats.partialElevation && (
-            <p className="text-sm text-[#65776C]">
+            <p className="ui-notice">
               Partial elevation: gain and loss include recorded sections only.
             </p>
           )
@@ -186,7 +192,7 @@ export function JourneySummary({
           ([, sensor]) =>
             sensor?.max !== undefined && sensor.average === undefined,
         ) && (
-          <p className="text-sm text-[#65776C]">
+          <p className="ui-notice">
             Sensor coverage is incomplete. Activity averages require at least
             80% recorded time coverage with gaps of at most 60 seconds.
           </p>
@@ -197,15 +203,14 @@ export function JourneySummary({
           distance={world.distance}
         />
         {splits.length > 0 && (
-          <section
-            aria-label="Kilometer splits"
-            className="rounded-2xl border border-[#D8E1D8] bg-white/70 p-4"
-          >
-            <h3 className="font-bold text-[#19392C]">Kilometer splits</h3>
+          <section aria-label="Kilometer splits" className="ui-panel">
+            <h3 className="text-lg font-bold text-foreground">
+              Kilometer splits
+            </h3>
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm tabular-nums">
                 <thead>
-                  <tr className="text-[#65776C]">
+                  <tr className="text-muted">
                     <th scope="col">Split</th>
                     <th scope="col">Distance</th>
                     <th scope="col">Moving time</th>
@@ -216,7 +221,7 @@ export function JourneySummary({
                   {splits.map((split) => (
                     <tr
                       key={split.kilometer}
-                      className="border-t border-[#D8E1D8]"
+                      className="border-t border-line transition-colors hover:bg-surface-muted"
                     >
                       <th scope="row" className="py-3 pr-2 font-medium">
                         {split.kilometer}

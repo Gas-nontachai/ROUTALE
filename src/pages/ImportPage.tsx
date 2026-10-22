@@ -164,25 +164,23 @@ export function ImportPage({ onPreview }: ImportPageProps) {
       <div className="flex min-h-0 w-full flex-1 items-center justify-center py-3 sm:py-5">
         <section
           aria-labelledby="import-title"
-          className="w-full max-w-[760px] rounded-xl border border-[#D7DFC9] bg-[#F9FAF5] p-4 shadow-sm sm:p-6 lg:max-h-full lg:overflow-y-auto xl:p-7"
+          className="w-full max-w-[760px] rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-6 lg:max-h-full lg:overflow-y-auto xl:p-7"
         >
           <div className="mb-3 flex items-center gap-3">
-            <span className="flex size-7 shrink-0 items-center justify-center border border-[#C9D5BE] text-[10px] font-bold text-[#7B9675]">
+            <span className="flex size-7 shrink-0 items-center justify-center border border-line text-xs font-bold text-muted">
               01
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#87957D]">
-              Every adventure starts somewhere
-            </span>
+            <span className="ui-eyebrow">Every adventure starts somewhere</span>
           </div>
 
           <div className="mb-4">
             <h1
               id="import-title"
-              className="text-xl font-extrabold tracking-tight text-[#193D30] sm:text-2xl"
+              className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
             >
               Bring your trail.
             </h1>
-            <p className="mt-1 text-sm text-[#899483]">
+            <p className="mt-1 text-sm text-muted">
               A morning run, a mountain hike, a walk to remember.
             </p>
           </div>
@@ -207,37 +205,50 @@ export function ImportPage({ onPreview }: ImportPageProps) {
               const file = event.dataTransfer.files[0];
               if (file) void importFile(file);
             }}
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-7 text-center transition-colors sm:py-9 ${dragging ? 'border-[#527C4C] bg-[#E5EFD9]' : 'border-[#CEDAC2] bg-[#F4F7EE]'}`}
+            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-7 text-center transition-colors sm:py-9 ${dragging ? 'border-primary bg-accent' : 'border-line bg-surface-muted'}`}
           >
-            <div className="mb-3 flex size-12 items-center justify-center rounded-lg bg-[#E5EDD9] text-[#6E956D]">
+            <div className="mb-3 flex size-12 items-center justify-center rounded-lg bg-surface-muted text-muted">
               {isLoading ? (
                 <LoaderCircle size={25} className="animate-spin" />
               ) : (
                 <Upload size={25} />
               )}
             </div>
-            <strong className="text-sm font-bold text-[#294B3B]">
+            <strong
+              role="status"
+              aria-live="polite"
+              className="text-base font-semibold text-foreground"
+            >
               {isLoading
                 ? demoLoading
                   ? 'Loading sample trail…'
                   : importStage
                 : 'Drop your GPX file here'}
             </strong>
-            <p className="mt-1 text-xs text-[#899A85]">
+            <p className="mt-1 text-xs text-muted">
               {isLoading
                 ? 'Preparing your 3D adventure…'
                 : 'Your route will open automatically after import'}
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isLoading}
-              onClick={() => inputRef.current?.click()}
-              size="sm"
-              className="mt-4"
-            >
-              <Upload size={15} /> Choose GPX file
-            </Button>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Button
+                type="button"
+                variant="primary"
+                disabled={isLoading}
+                onClick={() => inputRef.current?.click()}
+                size="sm"
+              >
+                <Upload size={15} /> Choose GPX file
+              </Button>
+              <Button
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => void loadDemo()}
+              >
+                <Play size={16} aria-hidden="true" />
+                Try a sample trail
+              </Button>
+            </div>
             <input
               ref={inputRef}
               type="file"
@@ -251,20 +262,20 @@ export function ImportPage({ onPreview }: ImportPageProps) {
                 event.target.value = '';
               }}
             />
-            <span className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA991]">
-              .GPX files
+            <span className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              .GPX · Up to 25 MB · 300,000 points
             </span>
           </div>
 
           {error && (
             <div
               role="alert"
-              className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="mt-3 rounded-lg border border-danger/30 bg-danger-surface px-4 py-3 text-sm text-danger"
             >
               {error}
             </div>
           )}
-          <div className="mt-4 flex items-start justify-center gap-2 border-t border-[#DFE6D7] pt-3 text-[11px] leading-relaxed text-[#98A18E]">
+          <div className="mt-4 flex items-start justify-center gap-2 border-t border-line pt-3 text-xs leading-relaxed text-muted">
             <LockKeyhole size={13} className="mt-0.5 shrink-0" />
             <span>
               GPX stays local. Map providers receive requests for the area you
@@ -274,7 +285,7 @@ export function ImportPage({ onPreview }: ImportPageProps) {
         </section>
       </div>
 
-      <div className="mx-auto hidden w-full max-w-[1100px] shrink-0 grid-cols-3 gap-4 border-t border-[#DEE5D5] pt-4 xl:grid [@media(max-height:850px)]:hidden">
+      <div className="mx-auto hidden w-full max-w-[1100px] shrink-0 grid-cols-3 gap-4 border-t border-line pt-4 xl:grid [@media(max-height:850px)]:hidden">
         {[
           {
             icon: Map,
@@ -293,12 +304,12 @@ export function ImportPage({ onPreview }: ImportPageProps) {
           },
         ].map(({ icon: Icon, title, description }) => (
           <div key={title} className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#EAF0E0] text-[#62845C]">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-muted">
               <Icon size={19} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xs font-bold text-[#294B3B]">{title}</h2>
-              <p className="mt-0.5 text-xs text-[#8C9885]">{description}</p>
+              <h2 className="text-xs font-bold text-foreground">{title}</h2>
+              <p className="mt-0.5 text-xs text-muted">{description}</p>
             </div>
           </div>
         ))}
