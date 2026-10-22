@@ -740,10 +740,10 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           }}
         >
           <Button
-            variant="unstyled"
+            variant="mapControl"
             ref={layersButton}
             type="button"
-            className={`group absolute right-0 grid size-10 shrink-0 place-items-center rounded-full transition-[opacity,transform] duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-amber-200 motion-reduce:transition-none ${controlsOpen ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'}`}
+            className={`group absolute right-0 grid size-10 shrink-0 place-items-center rounded-full transition-[opacity,transform] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'}`}
             aria-label="Map settings and controls"
             title="Map settings and controls"
             aria-controls="map-controls-menu"
@@ -769,9 +769,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               aria-label="Map controls"
             >
               <Button
-                variant="unstyled"
+                variant="mapControl"
                 type="button"
-                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition"
                 aria-label="Zoom out"
                 title="Zoom out"
                 disabled={!canSwitchStyle}
@@ -785,9 +785,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 <ZoomOut />
               </Button>
               <Button
-                variant="unstyled"
+                variant="mapControl"
                 type="button"
-                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition"
                 aria-label="Zoom in"
                 title="Zoom in"
                 disabled={!canSwitchStyle}
@@ -801,9 +801,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 <ZoomIn />
               </Button>
               <Button
-                variant="unstyled"
+                variant="mapControl"
                 type="button"
-                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition"
                 aria-label={`Reset compass to north; current bearing ${Math.round(bearing)} degrees`}
                 title={`Bearing ${Math.round(bearing)}° · reset north`}
                 disabled={!canSwitchStyle}
@@ -814,9 +814,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 <Compass style={{ transform: `rotate(${-bearing}deg)` }} />
               </Button>
               <Button
-                variant="unstyled"
+                variant="mapControl"
                 type="button"
-                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 disabled:opacity-40"
+                className="grid size-10 shrink-0 place-items-center rounded-full transition"
                 aria-label="Fit route"
                 title="Fit route"
                 disabled={!canSwitchStyle}
@@ -831,9 +831,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 <LocateFixed />
               </Button>
               <Button
-                variant="unstyled"
+                variant={layersOpen ? 'mapSelected' : 'mapControl'}
                 type="button"
-                className={`grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-amber-200 ${layersOpen ? 'bg-white/15' : ''}`}
+                className="grid size-10 shrink-0 place-items-center rounded-full transition"
                 aria-label="Layers and view options"
                 title="Layers and view options"
                 aria-expanded={layersOpen}
@@ -854,9 +854,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                     <Settings size={16} /> Map Settings
                   </strong>
                   <Button
-                    variant="unstyled"
+                    variant="ghost"
                     type="button"
-                    className="grid size-8 place-items-center rounded-lg hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-green-700"
+                    className="size-8 rounded-lg p-1"
                     aria-label="Close map settings"
                     onClick={() => setLayersOpen(false)}
                   >
@@ -867,9 +867,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 <div className="grid grid-cols-3 gap-1">
                   {mapStyles.map((option) => (
                     <Button
-                      variant="unstyled"
+                      variant="mapStyle"
                       key={option}
-                      className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-lg p-1 text-xs hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-green-700 disabled:opacity-50 aria-pressed:outline-2 aria-pressed:outline-green-700 aria-pressed:bg-green-50"
+                      className="flex min-h-[76px] flex-col gap-1 rounded-lg p-1 text-xs"
                       aria-pressed={style === option}
                       disabled={!canSwitchStyle || styleLoading}
                       onClick={() => {

@@ -23,13 +23,12 @@ export const Navbar = ({ isDark = false, onToggleTheme }: NavbarProps) => {
         </div>
 
         <Button
-          variant="unstyled"
+          variant="inverse"
           size="icon"
           type="button"
           onClick={onToggleTheme}
           disabled={!onToggleTheme}
           aria-label={isDark ? 'Light mode' : 'Dark mode'}
-          className="rounded-lg p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
         >
           {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
         </Button>

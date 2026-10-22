@@ -233,7 +233,8 @@ export function ImportPage({ onPreview }: ImportPageProps) {
               variant="outline"
               disabled={isLoading}
               onClick={() => inputRef.current?.click()}
-              className="mt-4 h-9 rounded-md border-[#B6CAB0] bg-white px-4 text-[11px] text-[#456B4C] shadow-none hover:bg-[#E7EFDF]"
+              size="sm"
+              className="mt-4"
             >
               <Upload size={15} /> Choose GPX file
             </Button>

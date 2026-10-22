@@ -147,7 +147,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             }}
             aria-label="Back to your trail"
             title="Back to your trail"
-            className="shrink-0 rounded-lg !text-[#244638] hover:!bg-[#E6EFE6] focus-visible:ring-[#367047]"
+            className="shrink-0"
           >
             <ChevronLeft size={22} />
           </Button>
@@ -182,7 +182,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             size="sm"
             type="button"
             onClick={togglePlayback}
-            className="min-h-11 shrink-0"
+            className="shrink-0"
           >
             <RotateCcw size={17} />
             {'Replay'}
@@ -252,12 +252,12 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           <div className="flex w-full items-center gap-3">
             {/* Play / Pause */}
             <Button
-              variant="default"
+              variant="primary"
               size="icon"
               type="button"
               onClick={togglePlayback}
               aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
-              className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#356B42] text-white transition-colors hover:bg-[#285637] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
+              className="size-11 shrink-0"
             >
               {isPlaying ? (
                 <Pause size={20} />
@@ -309,7 +309,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 const index = speeds.indexOf(simulation.speed);
                 simulation.setSpeed(speeds[(index + 1) % speeds.length]);
               }}
-              className="grid size-11 shrink-0 place-items-center rounded-lg border border-[#D5E4D8] bg-white text-sm font-semibold text-[#356B42] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
+              className="size-11 shrink-0"
             >
               {simulation.speed}x
             </Button>
@@ -319,7 +319,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               variant="outline"
               type="button"
               onClick={() => simulation.showSummary()}
-              className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-[#D5E4D8] bg-white px-4 text-sm font-medium text-[#233B31] transition-colors hover:bg-[#F0F7F1] active:bg-[#E2EFE4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#356B42]"
+              size="lg"
+              className="shrink-0"
             >
               Summary
             </Button>
