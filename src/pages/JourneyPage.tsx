@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  ArrowLeft,
+  ChevronLeft,
   Footprints,
   Mountain,
   Pause,
@@ -148,7 +148,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             title="Back to your trail"
             className="grid size-9 shrink-0 place-items-center rounded-lg !text-[#244638] transition hover:!bg-[#E6EFE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#367047]"
           >
-            <ArrowLeft size={22} />
+            <ChevronLeft size={22} />
           </Button>
 
           <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
@@ -177,13 +177,13 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         </div>
         {isCompleted && (
           <Button
-            variant="default"
+            variant="unstyled"
             type="button"
             onClick={togglePlayback}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg !bg-[#356B42] px-5 text-sm font-semibold !text-white shadow-sm transition hover:!bg-[#285637] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
           >
             <RotateCcw size={17} />
-            {'Replay Simulation'}
+            {'Replay'}
           </Button>
         )}
       </header>
