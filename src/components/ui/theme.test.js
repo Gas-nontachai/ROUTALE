@@ -28,6 +28,7 @@ describe.each(['light', 'dark'])('%s theme contrast', (theme) => {
     ['foreground', 'surface'],
     ['muted', 'surface'],
     ['muted', 'surface-muted'],
+    ['on-energy', 'energy'],
     ['on-primary', 'primary'],
     ['on-primary', 'primary-hover'],
     ['accent-foreground', 'accent'],

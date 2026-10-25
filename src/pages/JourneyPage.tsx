@@ -6,7 +6,14 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { ChevronLeft, Footprints, Mountain, Pause, Play } from 'lucide-react';
+import {
+  ChartNoAxesCombined,
+  ChevronLeft,
+  Footprints,
+  Mountain,
+  Pause,
+  Play,
+} from 'lucide-react';
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
 import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
@@ -45,7 +52,7 @@ class MapBoundary extends Component<
         role="alert"
         className="grid h-full place-items-center bg-surface-muted p-6 text-center text-sm text-muted"
       >
-        Map unavailable. Playback controls are still available.
+        Map unavailable. Playback still works.
       </div>
     ) : (
       this.props.children
@@ -103,12 +110,25 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
     simulation.status === 'Transitioning' ||
     simulation.status === 'Completing';
   const isCompleted = simulation.status === 'Completed';
-  const isReady = simulation.status === 'Ready';
   const ascent = world.processed.stats.ascent;
   const progress =
     world.duration > 0
       ? Math.min(100, Math.max(0, (simulation.elapsed / world.duration) * 100))
       : 0;
+  const handleImport = () => {
+    simulation.restart();
+    simulation.setSpeed(1);
+    useGpxStore
+      .getState()
+      .set({ activity: null, originalFile: null, status: 'idle', error: '' });
+    useWorldStore.setState({
+      world: null,
+      geography: null,
+      status: 'idle',
+      stage: '',
+    });
+    onBack();
+  };
   const handleReplay = () => {
     simulation.restart();
     simulation.begin();
@@ -135,12 +155,9 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             variant="ghost"
             size="icon"
             type="button"
-            onClick={() => {
-              simulation.pause();
-              onBack();
-            }}
-            aria-label="Back to your trail"
-            title="Back to your trail"
+            onClick={handleImport}
+            aria-label="Import GPX"
+            title="Import GPX"
             className="shrink-0"
           >
             <ChevronLeft size={22} />
@@ -160,8 +177,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 {km(world.processed.stats.distance ?? activity.distance)}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Mountain size={16} />
-                {ascent === undefined ? '—' : `${Math.round(ascent)} m`} gain
+                <Mountain size={16} aria-label="Elevation gain" role="img" />
+                {ascent === undefined ? '—' : `${Math.round(ascent)} m`}
               </span>
             </div>
           </div>
@@ -172,7 +189,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       <div className="min-h-[240px] flex-1 lg:min-h-0">
         <section
           aria-label="3D journey map"
-          className="relative h-full min-h-[240px] min-w-0 overflow-hidden rounded-xl border border-line bg-surface-muted shadow-sm lg:min-h-0"
+          className="relative h-full min-h-[240px] min-w-0 overflow-hidden rounded-sm border border-line bg-surface-muted lg:min-h-0"
         >
           <div
             ref={mapContainer}
@@ -185,7 +202,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                     role="status"
                     className="grid h-full place-items-center text-sm text-muted"
                   >
-                    Loading map engine…
+                    Loading map…
                   </div>
                 }
               >
@@ -204,22 +221,24 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
                 world={world}
                 activity={activity}
                 onReplay={handleReplay}
+                onImport={handleImport}
               />
             )}
           </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
-              <div className="flex items-center gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2 text-foreground shadow-sm sm:px-4 sm:py-3">
-                <Footprints size={26} className="shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-muted">Distance</p>
-                  <strong className="text-lg font-bold leading-tight text-foreground sm:text-xl">
-                    {km(simulation.distance)}
-                    <span className="ml-1 text-xs font-normal text-muted">
-                      / {km(world.distance)}
-                    </span>
-                  </strong>
-                </div>
+              <div className="distance-overlay px-3 py-2 sm:px-4">
+                <p className="text-xs font-semibold uppercase tracking-wider">
+                  Distance
+                </p>
+                <strong className="mt-1 block text-4xl font-bold leading-tight tabular-nums sm:text-5xl">
+                  {(simulation.distance / 1000).toFixed(2)}
+                  <span className="ml-2 text-lg">km</span>
+                  <span className="ml-3 text-xs font-medium">
+                    / {km(world.distance)}
+                  </span>
+                </strong>
+                <div className="mt-3 h-1 w-12 bg-energy" />
               </div>
             </div>
           )}
@@ -229,7 +248,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
       {!isCompleted && (
         <section
           aria-label="Playback controls"
-          className="shrink-0 rounded-xl border border-line bg-surface p-3 text-foreground shadow-sm"
+          className="shrink-0 rounded-sm border border-line bg-surface p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground"
         >
           <div className="flex w-full flex-wrap items-center gap-3">
             {/* Play / Pause */}
@@ -238,7 +257,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               size="icon"
               type="button"
               onClick={togglePlayback}
-              aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? 'Pause' : 'Play'}
               className="size-11 shrink-0"
             >
               {isPlaying ? (
@@ -284,7 +304,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               variant="outline"
               size="icon"
               type="button"
-              aria-label={`Playback speed ${simulation.speed}x. Click to change speed`}
+              aria-label={`Playback speed: ${simulation.speed}×`}
               title="Change playback speed"
               onClick={() => {
                 const speeds = [0.5, 1, 2, 4, 8];
@@ -300,10 +320,13 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             <Button
               variant="outline"
               type="button"
+              size="icon"
               onClick={() => simulation.showSummary()}
               className="ml-auto shrink-0 sm:ml-0"
+              aria-label="Summary"
+              title="Summary"
             >
-              Summary
+              <ChartNoAxesCombined size={20} aria-hidden="true" />
             </Button>
           </div>
         </section>

@@ -45,6 +45,10 @@
   --color-on-primary: var(--ui-on-primary);
   --color-accent: var(--ui-accent);
   --color-accent-foreground: var(--ui-accent-foreground);
+  --color-energy: var(--ui-energy);
+  --color-on-energy: var(--ui-on-energy);
+  --color-trail: var(--ui-trail);
+  --color-discovery: var(--ui-discovery);
   --color-danger: var(--ui-danger);
   --color-danger-surface: var(--ui-danger-surface);
 }
@@ -52,14 +56,18 @@
 :root,
 [data-theme='light'] {
   color-scheme: light;
-  --ui-canvas: #f7f8f3;
+  --ui-energy: #f28b39;
+  --ui-on-energy: #182e36;
+  --ui-trail: #2b8c6b;
+  --ui-discovery: #7855b2;
+  --ui-canvas: #faf9f4;
   --ui-surface: #ffffff;
   --ui-surface-muted: #edf2e8;
-  --ui-foreground: #19392c;
+  --ui-foreground: #182e36;
   --ui-muted: #52665a;
-  --ui-line: #cbd6c6;
-  --ui-primary: #18543d;
-  --ui-primary-hover: #124632;
+  --ui-line: #d7ded7;
+  --ui-primary: #237557;
+  --ui-primary-hover: #195847;
   --ui-on-primary: #ffffff;
   --ui-accent: #e2eedb;
   --ui-accent-foreground: #285a3a;
@@ -69,8 +77,12 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --ui-canvas: #14231c;
-  --ui-surface: #1c3026;
+  --ui-energy: #f5a466;
+  --ui-on-energy: #182e36;
+  --ui-trail: #83d1b1;
+  --ui-discovery: #c2a5ed;
+  --ui-canvas: #14252c;
+  --ui-surface: #1b3038;
   --ui-surface-muted: #253d30;
   --ui-foreground: #edf4e8;
   --ui-muted: #b4c5b5;
@@ -109,7 +121,7 @@
 
 @layer components {
   .ui-panel {
-    @apply rounded-xl border border-line bg-surface p-4 sm:p-5;
+    @apply border-t border-line py-5;
   }
   .ui-eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.14em] text-muted;
@@ -128,4 +140,18 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* A halo keeps transparent map numerals readable over imagery and labels. */
+.distance-overlay {
+  color: #182e36;
+  text-shadow:
+    0 0 3px white,
+    0 0 6px white,
+    1px 1px 1px white,
+    -1px -1px 1px white;
+}
+
+.map-settings-content {
+  max-height: min(440px, calc(100cqh - 80px));
 }

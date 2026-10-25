@@ -133,7 +133,7 @@ export function SummaryMap({ world }: { world: World }) {
 
   return (
     <div className="flex h-full min-h-[240px] w-full flex-col">
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-surface-muted">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-sm bg-surface-muted">
         <div
           ref={elementRef}
           className="absolute inset-0"

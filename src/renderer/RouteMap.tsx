@@ -77,7 +77,6 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   exaggerationRef.current = exaggeration;
   const status = useSimulationStore((state) => state.status);
   const { style, setStyle } = useMapStyleStore();
-  const [controlsOpen, setControlsOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [bearing, setBearing] = useState(0);
   const [styleLoading, setStyleLoading] = useState(false);
@@ -92,17 +91,15 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   const [terrain, setTerrain] = useState(true);
   const terrainEnabled = useRef(true);
   useEffect(() => {
-    if (!controlsOpen) return;
+    if (!layersOpen) return;
     const dismiss = (event: PointerEvent) => {
       if (!controlsMenu.current?.contains(event.target as Node)) {
         setLayersOpen(false);
-        setControlsOpen(false);
       }
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setLayersOpen(false);
-        setControlsOpen(false);
         layersButton.current?.focus();
       }
     };
@@ -112,7 +109,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       document.removeEventListener('pointerdown', dismiss);
       document.removeEventListener('keydown', escape);
     };
-  }, [controlsOpen]);
+  }, [layersOpen]);
   useEffect(() => {
     if (!host.current) return;
     let map: MapLibreMap;
@@ -706,6 +703,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     <div
       className="size-full overflow-hidden bg-surface-muted"
       ref={host}
+      style={{ containerType: 'size' }}
       aria-label={
         status === 'Completed'
           ? 'Top-down overview of the complete GPX route'
@@ -731,37 +729,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-end sm:inset-x-3 sm:top-3">
         <div
           ref={controlsMenu}
-          className={`pointer-events-auto relative flex h-11 items-center justify-end overflow-visible rounded-full border border-white/30 bg-[#18372fd9] text-white shadow-sm backdrop-blur-md transition-[width] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'w-[228px]' : 'w-11'}`}
-          onMouseEnter={() => setControlsOpen(true)}
-          onMouseLeave={() => {
-            setLayersOpen(false);
-            setControlsOpen(false);
-          }}
+          className="pointer-events-auto relative flex items-center rounded-full border border-white/30 bg-[#195847] p-1 text-white"
         >
-          <Button
-            variant="mapControl"
-            ref={layersButton}
-            type="button"
-            className={`group absolute right-0 grid size-11 shrink-0 place-items-center rounded-full transition-[opacity,transform] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'}`}
-            aria-label="Map settings and controls"
-            title="Map settings and controls"
-            aria-controls="map-controls-menu"
-            aria-expanded={controlsOpen}
-            onFocus={() => setControlsOpen(true)}
-            onClick={() => setControlsOpen(!controlsOpen)}
-            disabled={!ready}
-          >
-            <Settings
-              className="transition-transform duration-200 ease-in-out group-hover:rotate-45"
-              size={19}
-            />
-          </Button>
-          <div
-            id="map-controls-menu"
-            className={`flex min-w-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-in-out motion-reduce:transition-none ${controlsOpen ? 'w-full opacity-100' : 'pointer-events-none w-0 opacity-0'}`}
-            aria-hidden={!controlsOpen}
-            inert={!controlsOpen}
-          >
+          <div id="map-controls-menu" className="flex min-w-0 items-center">
             <div
               className="flex items-center justify-between gap-0"
               role="group"
@@ -773,7 +743,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 className="grid size-11 shrink-0 place-items-center rounded-full transition"
                 aria-label="Zoom out"
                 title="Zoom out"
-                disabled={!canSwitchStyle}
+                disabled={!ready || !canSwitchStyle}
                 onClick={() =>
                   mapRef.current?.easeTo({
                     zoom: mapRef.current.getZoom() - 1,
@@ -789,7 +759,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 className="grid size-11 shrink-0 place-items-center rounded-full transition"
                 aria-label="Zoom in"
                 title="Zoom in"
-                disabled={!canSwitchStyle}
+                disabled={!ready || !canSwitchStyle}
                 onClick={() =>
                   mapRef.current?.easeTo({
                     zoom: mapRef.current.getZoom() + 1,
@@ -805,7 +775,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 className="grid size-11 shrink-0 place-items-center rounded-full transition"
                 aria-label={`Reset compass to north; current bearing ${Math.round(bearing)} degrees`}
                 title={`Bearing ${Math.round(bearing)}° · reset north`}
-                disabled={!canSwitchStyle}
+                disabled={!ready || !canSwitchStyle}
                 onClick={() =>
                   mapRef.current?.easeTo({ bearing: 0, duration: 500 })
                 }
@@ -818,7 +788,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 className="grid size-11 shrink-0 place-items-center rounded-full transition"
                 aria-label="Fit route"
                 title="Fit route"
-                disabled={!canSwitchStyle}
+                disabled={!ready || !canSwitchStyle}
                 onClick={() =>
                   mapRef.current?.fitBounds(routeBounds(world), {
                     padding: 72,
@@ -835,6 +805,8 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                 className="grid size-11 shrink-0 place-items-center rounded-full transition"
                 aria-label="Layers and view options"
                 title="Layers and view options"
+                ref={layersButton}
+                aria-controls="map-settings"
                 aria-expanded={layersOpen}
                 onClick={() => setLayersOpen(!layersOpen)}
               >
@@ -842,27 +814,31 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               </Button>
             </div>
           </div>
-          {layersOpen && controlsOpen && (
+          {layersOpen && (
             <section
               className="absolute right-0 top-full z-10 w-[min(320px,calc(100vw-24px))] pt-2"
+              id="map-settings"
               aria-label="Map settings"
             >
-              <div className="rounded-2xl border border-line bg-surface p-3 text-foreground shadow-xl shadow-[#173b3240]">
+              <div className="map-settings-content overflow-y-auto rounded-lg border border-line bg-surface p-3 text-foreground shadow-sm">
                 <header className="mb-3 flex items-center justify-between">
                   <strong className="flex items-center gap-2 text-sm">
-                    <Settings size={16} /> Map Settings
+                    <Settings size={16} aria-hidden="true" /> Map
                   </strong>
                   <Button
                     variant="ghost"
                     type="button"
                     className="size-11 rounded-lg p-2"
                     aria-label="Close map settings"
-                    onClick={() => setLayersOpen(false)}
+                    onClick={() => {
+                      setLayersOpen(false);
+                      layersButton.current?.focus();
+                    }}
                   >
                     <X size={18} />
                   </Button>
                 </header>
-                <p className="my-2 text-xs font-semibold">Map Style</p>
+                <p className="my-2 text-xs font-semibold">Style</p>
                 <div className="grid grid-cols-3 gap-1">
                   {mapStyles.map((option) => (
                     <Button
@@ -910,7 +886,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                   />
                 </label>
                 <label className="flex min-h-11 items-center justify-between gap-2 border-t border-line text-xs">
-                  <span>Terrain Exaggeration</span>
+                  <span>Terrain scale</span>
                   <select
                     className="min-h-11 rounded-lg border border-line bg-surface px-2 py-1"
                     aria-label="Terrain exaggeration"
@@ -936,9 +912,14 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                     ))}
                   </select>
                 </label>
+                <p className="mt-3 text-xs text-muted">
+                  {canSwitchStyle
+                    ? 'Drag to explore.'
+                    : 'Pause to edit the map.'}
+                </p>
                 {styleLoading && (
                   <small className="block px-2 py-1.5 text-xs text-muted">
-                    Loading map style…
+                    Loading style…
                   </small>
                 )}
                 {styleError && (

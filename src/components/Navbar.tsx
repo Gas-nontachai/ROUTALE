@@ -1,4 +1,4 @@
-import { Mountain, Sun, Moon } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 import { Button } from './ui/button';
 
 type NavbarProps = {
@@ -8,16 +8,14 @@ type NavbarProps = {
 
 export const Navbar = ({ isDark = false, onToggleTheme }: NavbarProps) => {
   return (
-    <header className="relative z-50 w-full bg-[#173D30] text-white">
+    <header className="relative z-50 w-full bg-[#182E36] text-white">
       <div className="flex h-16 w-full items-center justify-between px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Mountain className="size-7 shrink-0 text-[#A5D886]" />
-
-          <span className="min-w-0 text-sm font-bold tracking-tight sm:text-lg">
-            GPX Pixel Adventure
+          <span className="min-w-0 text-xl font-bold tracking-tight sm:text-2xl">
+            ROUTALE
           </span>
 
-          <span className="hidden rounded bg-white/15 sm:inline-flex px-2 py-1 text-[10px] font-semibold tracking-wider">
+          <span className="hidden rounded bg-white/10 text-[#F28B39] sm:inline-flex px-2 py-1 text-[10px] font-semibold tracking-wider">
             BETA
           </span>
         </div>
@@ -29,6 +27,7 @@ export const Navbar = ({ isDark = false, onToggleTheme }: NavbarProps) => {
           onClick={onToggleTheme}
           disabled={!onToggleTheme}
           aria-label={isDark ? 'Light mode' : 'Dark mode'}
+          title={isDark ? 'Light mode' : 'Dark mode'}
           aria-pressed={isDark}
         >
           {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}

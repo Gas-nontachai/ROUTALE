@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ChartNoAxesCombined,
   LoaderCircle,
   LockKeyhole,
-  Map,
   Play,
-  Trees,
   Upload,
-  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import type { Activity, World } from '../lib/route';
@@ -31,7 +29,6 @@ export function ImportPage({ onPreview }: ImportPageProps) {
   const [dragging, setDragging] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const requestIdRef = useRef(0);
@@ -60,6 +57,8 @@ export function ImportPage({ onPreview }: ImportPageProps) {
   }, []);
 
   async function importFile(file: File) {
+    if (workerRef.current || useGpxStore.getState().status === 'loading')
+      return;
     const id = ++requestIdRef.current;
     clearWorker();
     set({ error: '', status: 'loading', activity: null, originalFile: file });
@@ -132,148 +131,126 @@ export function ImportPage({ onPreview }: ImportPageProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain py-4 lg:overflow-hidden lg:py-3">
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center py-3 sm:py-5">
-        <section
-          aria-labelledby="import-title"
-          className="w-full max-w-[760px] rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-6 lg:max-h-full lg:overflow-y-auto xl:p-7"
-        >
-          <div className="mb-3 flex items-center gap-3">
-            <span className="flex size-7 shrink-0 items-center justify-center border border-line text-xs font-bold text-muted">
-              01
-            </span>
-            <span className="ui-eyebrow">Every adventure starts somewhere</span>
-          </div>
-
-          <div className="mb-4">
-            <h1
-              id="import-title"
-              className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-            >
-              Bring your trail.
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              A morning run, a mountain hike, a walk to remember.
-            </p>
-          </div>
-
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              if (!isLoading) setDragging(true);
-            }}
-            onDragLeave={(event) => {
-              if (
-                !event.currentTarget.contains(
-                  event.relatedTarget as Node | null,
-                )
-              )
-                setDragging(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragging(false);
-              if (isLoading) return;
-              const file = event.dataTransfer.files[0];
-              if (file) void importFile(file);
-            }}
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-7 text-center transition-colors sm:py-9 ${dragging ? 'border-primary bg-accent' : 'border-line bg-surface-muted'}`}
+    <section
+      aria-labelledby="import-title"
+      aria-busy={isLoading}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (!isLoading) setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        if (!isLoading && event.dataTransfer.files[0])
+          void importFile(event.dataTransfer.files[0]);
+      }}
+      className={`h-full overflow-y-auto overscroll-contain ${dragging ? 'bg-accent outline-2 outline-dashed outline-primary -outline-offset-4' : ''}`}
+    >
+      <div className="mx-auto grid min-h-full max-w-[1300px] items-center gap-8 px-3 py-8 sm:px-6 sm:py-12 lg:grid-cols-2 lg:gap-12 lg:py-16">
+        <div className="min-w-0">
+          <h1
+            id="import-title"
+            className="text-[clamp(2.5rem,5.2vw,4.5rem)] font-bold leading-[1.12] tracking-tight"
           >
-            <div className="mb-3 flex size-12 items-center justify-center rounded-lg bg-surface-muted text-muted">
-              {isLoading ? (
-                <LoaderCircle size={25} className="animate-spin" />
-              ) : (
-                <Upload size={25} />
-              )}
-            </div>
-            <strong
-              role="status"
-              aria-live="polite"
-              className="text-base font-semibold text-foreground"
-            >
-              {isLoading ? importStage : 'Drop your GPX file here'}
-            </strong>
-            <p className="mt-1 text-xs text-muted">
-              {isLoading
-                ? 'Preparing your 3D adventure…'
-                : 'Your route will open automatically after import'}
-            </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <Button
-                type="button"
-                variant="primary"
-                disabled={isLoading}
-                onClick={() => inputRef.current?.click()}
-                size="sm"
-              >
-                <Upload size={15} /> Choose GPX file
-              </Button>
-            </div>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".gpx,application/gpx+xml"
-              aria-label="Choose GPX file"
-              className="sr-only"
-              tabIndex={-1}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void importFile(file);
-                event.target.value = '';
-              }}
-            />
-            <span className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              .GPX · Up to 25 MB · 300,000 points
-            </span>
-          </div>
-
+            YOUR ROUTE.
+            <br />
+            <span className="text-primary">YOUR STORY.</span>
+          </h1>
+          <p className="mt-7 text-lg text-muted">
+            Relive your route. Discover more.
+          </p>
+          <Button
+            variant="energy"
+            size="xl"
+            disabled={isLoading}
+            className="mt-8 sm:mt-12"
+            onClick={() => inputRef.current?.click()}
+          >
+            {isLoading ? (
+              <LoaderCircle
+                size={20}
+                className="animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <Upload size={20} aria-hidden="true" />
+            )}
+            {isLoading ? 'Importing…' : 'Import GPX'}
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".gpx,application/gpx+xml"
+            aria-label="Choose GPX file"
+            className="sr-only"
+            tabIndex={-1}
+            disabled={isLoading}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importFile(file);
+              event.target.value = '';
+            }}
+          />
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-3 text-sm text-muted"
+          >
+            {isLoading
+              ? importStage
+              : dragging
+                ? 'Drop to import'
+                : 'or drop a GPX here'}
+          </p>
           {error && (
-            <div
+            <p
               role="alert"
-              className="mt-3 rounded-lg border border-danger/30 bg-danger-surface px-4 py-3 text-sm text-danger"
+              className="mt-4 rounded-md border border-danger/30 bg-danger-surface p-3 text-sm text-danger"
             >
               {error}
-            </div>
+            </p>
           )}
-          <div className="mt-4 flex items-start justify-center gap-2 border-t border-line pt-3 text-xs leading-relaxed text-muted">
-            <LockKeyhole size={13} className="mt-0.5 shrink-0" />
+          <p className="mt-7 flex max-w-md items-start gap-2 text-xs leading-relaxed text-muted">
+            <LockKeyhole
+              size={15}
+              className="mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
             <span>
-              GPX stays local. Map providers receive requests for the area you
-              view.
+              GPX stays on your device. Maps request the area you view.
             </span>
+          </p>
+        </div>
+        <div className="min-w-0 pb-4">
+          <div className="overflow-hidden" aria-hidden="true">
+            <img
+              src="/assets/routale/route.svg"
+              width="540"
+              height="300"
+              alt=""
+              className="block h-auto max-w-full"
+            />
           </div>
-        </section>
+          <ol
+            aria-label="Your route to discovery"
+            className="mt-4 flex flex-wrap justify-between gap-3 text-xs font-semibold tracking-wide sm:mt-12 sm:text-sm"
+          >
+            <li className="flex items-center gap-2 text-primary">
+              <Upload size={16} aria-hidden="true" /> IMPORT
+            </li>
+            <li className="flex items-center gap-2 text-foreground">
+              <Play size={16} aria-hidden="true" /> RELIVE
+            </li>
+            <li className="flex items-center gap-2 text-discovery">
+              <ChartNoAxesCombined size={16} aria-hidden="true" /> EXPLORE
+            </li>
+          </ol>
+        </div>
       </div>
-
-      <div className="mx-auto hidden w-full max-w-[1100px] shrink-0 grid-cols-3 gap-4 border-t border-line pt-4 xl:grid [@media(max-height:850px)]:hidden">
-        {[
-          {
-            icon: Map,
-            title: 'Your route, mapped',
-            description: 'Every segment stays true to the GPX.',
-          },
-          {
-            icon: Trees,
-            title: 'Real terrain',
-            description: 'Mapterhorn elevation on OpenFreeMap.',
-          },
-          {
-            icon: Play,
-            title: 'Follow the journey',
-            description: 'Watch the route with a steady camera.',
-          },
-        ].map(({ icon: Icon, title, description }) => (
-          <div key={title} className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-muted">
-              <Icon size={19} />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-xs font-bold text-foreground">{title}</h2>
-              <p className="mt-0.5 text-xs text-muted">{description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }

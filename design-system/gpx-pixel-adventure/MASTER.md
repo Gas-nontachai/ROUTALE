@@ -1,32 +1,27 @@
-# GPX Pixel Adventure UI
+# Routale UI — The Living Atlas
 
-This is the implementation reference for the existing product. Keep its forest green and cream identity, existing map provider and single playback timeline.
+Formerly GPX Pixel Adventure; the legacy directory is retained to avoid breaking references.
 
-## Shared foundations
+## Foundations
 
-- Use semantic Tailwind colors from `src/index.css`: canvas, surface, surface-muted, foreground, muted, line, primary/on-primary, accent/accent-foreground and danger/danger-surface. Light and dark modes map the same roles to different values.
-- Use the bundled Kanit family, regular 400 through bold 700. No external font requests.
-- Page titles: 24–30 px; section titles: 18 px; body: 14–16 px; labels and supporting copy: at least 12 px. Numeric metrics use tabular figures.
-- Use 4/8 px spacing increments, 12 px button/field groups, 16–24 px section padding and 20–24 px section gaps. App gutters grow from 12 px on phones to 24 px on desktop.
-- Use 8 px radii for controls/notices and 12 px for panels/maps. Keep shadows subtle.
+Use semantic tokens in src/index.css and the bundled Kanit 400–700 fonts. Canvas #FAF9F4, Ink #182E36, Trail Green #2B8C6B, Orange #F28B39, Violet #7855B2, Berry #B65271, Lake Blue #438BB7. Text/button roles use contrast-adjusted green (#237557) and theme-specific foregrounds. Kanit OFL is available in public/licenses. No remote fonts, GSAP or Storybook.
 
-## Components and interactions
+Use restrained borders, small control radii and editorial section rules. Avoid giant cards and decorative gradients. Data uses tabular numerals. Base copy 14–16px, supporting labels at least 12px. Buttons and icon tools are at least 44px. Reuse Button variants: primary, energy, secondary, outline, danger; preserve native disabled and focus semantics.
 
-- Reuse `Button`: primary for the principal action, outline for secondary actions, soft for inactive chart tabs, ghost for navigation. Buttons have at least 44 px height; icon controls are 44 × 44 px.
-- Keep a visible focus ring, meaningful names for icon controls, keyboard tab navigation and reduced-motion support. Keep pressed-state feedback within stable layout bounds.
-- `.ui-panel` is the shared analysis/card surface; `.ui-notice` is the shared informational state. Loading has live text, a spinner and disabled duplicate actions. Error states use danger tokens.
-- Chart colors encode metrics rather than application surfaces; axes, grids and tooltips follow the active theme. Missing data remains a gap.
-- The map imagery and dark translucent map toolbar retain their existing map-specific visual treatment. Settings panels follow application theme tokens.
+## Composition
 
-## Responsive composition
+Navbar: wordmark, optional Beta and theme only. Footer: promise and native Licenses & map credits dialog. Inline MapLibre attribution remains on both maps.
 
-- Import: one focused upload panel, primary file action and secondary existing sample-trail action.
-- Playback: route fills available height; controls wrap and timeline moves to a full-width row on phones. Short landscape windows can scroll rather than conceal controls.
-- Summary: one shared map; three primary metrics, two-column secondary statistics on narrow layouts, analysis and splits below. Available height is used on mobile instead of a fixed short map viewport. Replay stays visible in Summary.
-- Avoid horizontal page overflow. Tables can scroll within their own panel. Labels and long activity names must not force the viewport wider.
+Home: two-column headline/import and local Figma SVG; single-column on mobile. Click/drop use the same worker validation with loading/error/retry. GPX is local; map geography requests are explained. SVG is the supplied Figma Home asset, not an activity data illustration.
+
+Journey: compact identity, dominant live map, transparent distance numerals with a white text halo. Five map tools always visible. Native title tooltips and accessible names. Camera/layer actions require user camera ownership; Pause is explained. Settings stay open until dismissed, with Escape/close focus restoration. Simulation engine remains the only playback clock. Dock respects bottom safe area.
+
+Summary: identity/actions, primary facts, overview map/details, optional technical disclosure, Explore the Data and splits. Missing measurements use dashes or are omitted. New import clears session; Replay reuses parsed route.
+
+Chart: Elevation, Pace, Heart rate, Temperature, Gradient, when available. Checkboxes; one physical axis, two physical axes, 3–5 metrics normalize each metric to 0–100%. Higher pace means slower movement; flat trends center at 50%. Distance alignment uses original source coordinates, with existing gap/extrema-preserving decimation. Actual units in popup and screen-reader announcements. Pointer/touch, click pin, keyboard arrows/Home/End/Enter/Escape. Chart state remains local and does not rerender the map on pointer movement.
+
+Splits: real pipeline values; partial label; fastest ranking excludes partial and unavailable pace. No optional pace bars.
 
 ## Verification
 
-Theme text pairs have automated 4.5:1 contrast checks. Button tests cover safe default type, explicit submit, loading and composed links. Browser checks cover light/dark Import, real sample worker import, Preview, Play/Pause, Summary, keyboard chart tabs and Replay, with widths 375, 768, 1024 and 1440 px plus 812 × 375 landscape. Responsive checks measured no horizontal page overflow; replay released the Summary map, leaving one playback map canvas.
-
-`ui-ux-pro-max` informed accessibility, contrast, shared tokens, responsive sizing and interaction consistency. Its generated landing-page patterns and alternate palettes were not applied because they did not match the established product. No generated search output was persisted as a product decision.
+Use npm test, npm run build, npm run knip and npm run format:check. Theme tests enforce 4.5:1 foreground pairs, including energy buttons. Review mobile/desktop and light/dark. See docs/routale/IMPLEMENTATION_CHECKLIST.md for actual current browser evidence and remaining release limits; do not infer verification from design specimens.

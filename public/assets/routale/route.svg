@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="540" height="300" viewBox="0 0 540 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Hero vector route illustration">
+<path id="Vector" d="M15 255C105 238 40 155 160 173C280 191 240 230 295 155C350 80 373 32 500 53" stroke-width="7" stroke-linecap="round" stroke="#195847"/>
+<path id="Vector_2" d="M295 155C361 55 420 31 500 53" stroke-width="7" stroke-linecap="round" stroke="#F28B39"/>
+<path id="Vector_3" d="M15 267C21.6274 267 27 261.627 27 255C27 248.373 21.6274 243 15 243C8.37258 243 3 248.373 3 255C3 261.627 8.37258 267 15 267Z" fill="#FAF9F4" stroke-width="6" stroke="#195847"/>
+<path id="Vector_4" d="M500 67C507.732 67 514 60.732 514 53C514 45.268 507.732 39 500 39C492.268 39 486 45.268 486 53C486 60.732 492.268 67 500 67Z" fill="#F28B39" stroke-width="5" stroke="white"/>
+<path id="Vector_5" d="M45 115C101.667 65 153.333 67.3333 200 122C246.667 176.667 310 177.333 390 124M50 140C103.333 90 153.333 92.3333 200 147C246.667 201.667 310 202.333 390 149M60 164C106.667 114 153.333 116.667 200 172C246.667 227.333 310 228 390 174" stroke-width="2" stroke="#AEC6B5"/>
+</g>
+</svg>

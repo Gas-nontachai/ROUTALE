@@ -1,4 +1,8 @@
-# GPX Pixel Adventure v1.3 — 3D Journey Experience
+# Routale — Every route has more to tell.
+
+Formerly GPX Pixel Adventure. Browser-first GPX playback and activity insights, with local processing and no account.
+
+The Routale rebrand adds editorial import, persistent map tools, route-first Summary, five-metric comparison and complete-kilometer split ranking. See [implementation handoff](docs/routale/IMPLEMENTATION_CHECKLIST.md) and [PRD](docs/routale/ROUTALE_BIG_BANG_PRD_v1.md).
 
 A local GPX journey player built with React, TypeScript, MapLibre and Zustand. Import a GPX, preview its route, play the journey, then crossfade into its precomputed summary. Replay uses the same data without importing again.
 
