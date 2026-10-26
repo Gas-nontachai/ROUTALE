@@ -76,6 +76,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   const exaggerationRef = useRef(exaggeration);
   exaggerationRef.current = exaggeration;
   const status = useSimulationStore((state) => state.status);
+  const isPlaying = ['Playing', 'Transitioning', 'Completing'].includes(status);
   const { style, setStyle } = useMapStyleStore();
   const [layersOpen, setLayersOpen] = useState(false);
   const [bearing, setBearing] = useState(0);
@@ -729,7 +730,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-end sm:inset-x-3 sm:top-3">
         <div
           ref={controlsMenu}
-          className="pointer-events-auto relative flex items-center rounded-full border border-white/30 bg-[#195847] p-1 text-white"
+          inert={isPlaying}
+          aria-hidden={isPlaying}
+          className={`relative flex items-center rounded-full border border-white/30 bg-[#195847] p-1 text-white transition-opacity duration-300 motion-reduce:transition-none ${isPlaying ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
         >
           <div id="map-controls-menu" className="flex min-w-0 items-center">
             <div
