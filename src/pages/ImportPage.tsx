@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ChartNoAxesCombined,
-  LoaderCircle,
-  LockKeyhole,
-  Play,
-  Upload,
-} from 'lucide-react';
+import { ChartNoAxesCombined, LockKeyhole, Play, Upload } from 'lucide-react';
+import { LoadingState } from '../components/LoadingState';
 import { Button } from '../components/ui/button';
 import type { Activity, World } from '../lib/route';
 import { useGpxStore, useWorldStore, useSimulationStore } from '../stores';
@@ -167,19 +162,17 @@ export function ImportPage({ onPreview }: ImportPageProps) {
             variant="energy"
             size="xl"
             disabled={isLoading}
+            aria-label={isLoading ? 'Importing GPX' : undefined}
             className="mt-8 sm:mt-12"
             onClick={() => inputRef.current?.click()}
           >
             {isLoading ? (
-              <LoaderCircle
-                size={20}
-                className="animate-spin"
-                aria-hidden="true"
-              />
+              <LoadingState label="Importing…" className="text-inherit" />
             ) : (
-              <Upload size={20} aria-hidden="true" />
+              <>
+                <Upload size={20} aria-hidden="true" /> Import GPX
+              </>
             )}
-            {isLoading ? 'Importing…' : 'Import GPX'}
           </Button>
           <input
             ref={inputRef}

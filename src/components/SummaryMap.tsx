@@ -9,6 +9,7 @@ import {
   type MapStyle,
 } from '../lib/mapStyles';
 import type { World } from '../lib/route';
+import { LoadingState } from './LoadingState';
 import { useMapStyleStore } from '../stores';
 
 // Keep this consistent with the default style used by RouteMap.
@@ -19,22 +20,40 @@ export function SummaryMap({ world }: { world: World }) {
   const elementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const coordinates = useMemo(() => routeCoordinates(world), [world]);
 
   useEffect(() => {
     const element = elementRef.current;
     if (!element || !coordinates.some((segment) => segment.length >= 2)) return;
     let disposed = false;
-    const map = new maplibregl.Map({
-      container: element,
-      style: MAP_STYLE,
-      center: coordinates[0][0],
-      zoom: 11,
-      interactive: false,
-      fadeDuration: 0,
-      attributionControl: false,
-    });
+    setLoading(true);
+    setError('');
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: element,
+        style: MAP_STYLE,
+        center: coordinates[0][0],
+        zoom: 11,
+        interactive: false,
+        fadeDuration: 0,
+        attributionControl: false,
+      });
+    } catch {
+      setLoading(false);
+      setError(
+        'This device cannot render the route map. Your activity insights are still available.',
+      );
+      return;
+    }
     mapRef.current = map;
+    map.on('dataloading', () => {
+      if (!disposed) setLoading(true);
+    });
+    map.on('idle', () => {
+      if (!disposed) setLoading(false);
+    });
     const bounds = new maplibregl.LngLatBounds(
       coordinates[0][0],
       coordinates[0][0],
@@ -105,7 +124,10 @@ export function SummaryMap({ world }: { world: World }) {
       fitRoute();
     });
     map.on('error', () => {
-      if (!disposed) setError('Map tiles could not be loaded.');
+      if (!disposed) {
+        setLoading(false);
+        setError('Map tiles could not be loaded.');
+      }
     });
     map.on('sourcedata', (event) => {
       if (
@@ -146,8 +168,21 @@ export function SummaryMap({ world }: { world: World }) {
             Route coordinates unavailable.
           </div>
         )}
+        {loading &&
+          !error &&
+          coordinates.some((segment) => segment.length >= 2) && (
+            <div className="pointer-events-none absolute inset-0 grid place-items-center p-4 text-center">
+              <LoadingState
+                label="Loading route overview…"
+                className="rounded-lg border border-line bg-surface/95 px-4 py-3 shadow-sm"
+              />
+            </div>
+          )}
         {error && (
-          <div className="absolute left-3 top-3 rounded bg-surface p-2 text-xs">
+          <div
+            role="status"
+            className="absolute left-3 right-3 top-3 rounded bg-surface p-2 text-xs"
+          >
             {error}
           </div>
         )}

@@ -1,8 +1,48 @@
-import { useEffect, useState } from 'react';
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ImportPage } from './pages/ImportPage';
-import { JourneyPage } from './pages/JourneyPage';
+import { Button } from './components/ui/button';
+import { LoadingState } from './components/LoadingState';
+
+const JourneyPage = lazy(() =>
+  import('./pages/JourneyPage').then(({ JourneyPage }) => ({
+    default: JourneyPage,
+  })),
+);
+
+export class JourneyBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <div
+        role="alert"
+        className="grid h-full content-center justify-items-center gap-3 p-4 text-center"
+      >
+        <p>
+          The journey could not be loaded. Check your connection and reload to
+          import your GPX again.
+        </p>
+        <Button onClick={() => window.location.reload()}>Reload Routale</Button>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 
 type Screen = 'import' | 'world';
 
@@ -42,7 +82,17 @@ export default function App() {
         {screen === 'import' ? (
           <ImportPage onPreview={() => setScreen('world')} />
         ) : (
-          <JourneyPage onBack={() => setScreen('import')} />
+          <JourneyBoundary>
+            <Suspense
+              fallback={
+                <div className="grid h-full place-items-center">
+                  <LoadingState label="Preparing your journey…" />
+                </div>
+              }
+            >
+              <JourneyPage onBack={() => setScreen('import')} />
+            </Suspense>
+          </JourneyBoundary>
         )}
       </main>
 

@@ -8,6 +8,8 @@ const harness = vi.hoisted(() => ({
   listeners: {} as Record<string, (() => void)[]>,
   resize: () => {},
   disconnect: vi.fn(),
+  setLoading: vi.fn(),
+  setError: vi.fn(),
   map: {
     on: vi.fn(),
     once: vi.fn(),
@@ -24,7 +26,10 @@ vi.mock('react', async (original) => ({
   ...(await original<typeof import('react')>()),
   useRef: () => ({ current: harness.element }),
   useMemo: (fn: () => unknown) => fn(),
-  useState: () => ['', vi.fn()],
+  useState: (value: unknown) => [
+    value,
+    typeof value === 'boolean' ? harness.setLoading : harness.setError,
+  ],
   useEffect: (fn: () => undefined | (() => void)) => harness.effects.push(fn),
 }));
 vi.mock('maplibre-gl', () => ({
@@ -76,6 +81,15 @@ it('reuses its map when resized, ignores zero-size containers and releases resou
   SummaryMap({ world });
   const cleanup = harness.effects[0]()!;
   harness.listeners['style.load'][0]();
+  harness.listeners.dataloading[0]();
+  expect(harness.setLoading).toHaveBeenLastCalledWith(true);
+  harness.listeners.idle[0]();
+  expect(harness.setLoading).toHaveBeenLastCalledWith(false);
+  harness.listeners.error[0]();
+  expect(harness.setLoading).toHaveBeenLastCalledWith(false);
+  expect(harness.setError).toHaveBeenLastCalledWith(
+    'Map tiles could not be loaded.',
+  );
   harness.resize();
   harness.element.clientWidth = 390;
   harness.resize();

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { LoaderCircle } from 'lucide-react';
+import { LoadingState } from '../LoadingState';
 import { cn } from '../../lib/utils';
 
 const buttonVariants = cva(
@@ -74,13 +74,11 @@ export function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      aria-label={loading ? 'Loading…' : undefined}
       {...props}
     >
       {loading && !asChild ? (
-        <>
-          <LoaderCircle className="animate-spin" aria-hidden="true" />
-          Loading…
-        </>
+        <LoadingState label="Loading…" className="text-inherit" />
       ) : (
         children
       )}

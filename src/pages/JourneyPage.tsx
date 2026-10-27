@@ -19,6 +19,7 @@ import {
 import { completionPresentation } from '../lib/motion';
 import { useJourney } from '../hooks/useJourney';
 import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
+import { LoadingState } from '../components/LoadingState';
 import { Button } from '../components/ui/button';
 import { JourneySummary } from '../components/JourneySummary';
 import { PreviewRatioPicker } from '../components/PreviewRatioPicker';
@@ -107,7 +108,12 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
     }
   }, [simulation.status]);
 
-  if (!world || !activity || !engine) return null;
+  if (!world || !activity || !engine)
+    return (
+      <div className="grid h-full place-items-center">
+        <LoadingState label="Preparing your journey…" />
+      </div>
+    );
 
   const isPlaying =
     simulation.status === 'Playing' ||
@@ -207,11 +213,8 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             <MapBoundary key={world.seed}>
               <Suspense
                 fallback={
-                  <div
-                    role="status"
-                    className="grid h-full place-items-center text-sm text-muted"
-                  >
-                    Loading map…
+                  <div className="grid h-full place-items-center p-4 text-center">
+                    <LoadingState label="Loading map…" />
                   </div>
                 }
               >
@@ -221,7 +224,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
           </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
-              <div className="distance-overlay px-3 py-2 sm:px-4">
+              <div className="px-3 py-2 text-[#182e36] [text-shadow:0_0_3px_white,0_0_6px_white,1px_1px_1px_white,-1px_-1px_1px_white] sm:px-4">
                 <p className="text-xs font-semibold uppercase tracking-wider">
                   Distance
                 </p>

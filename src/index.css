@@ -141,17 +141,3 @@
     transition-duration: 0.01ms !important;
   }
 }
-
-/* A halo keeps transparent map numerals readable over imagery and labels. */
-.distance-overlay {
-  color: #182e36;
-  text-shadow:
-    0 0 3px white,
-    0 0 6px white,
-    1px 1px 1px white,
-    -1px -1px 1px white;
-}
-
-.map-settings-content {
-  max-height: min(440px, calc(100cqh - 80px));
-}

@@ -12,7 +12,27 @@
     <title>Routale — Every route has more to tell.</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        role="status"
+        aria-live="polite"
+        style="
+          display: grid;
+          min-height: 100dvh;
+          place-items: center;
+          background: #faf9f4;
+          color: #182e36;
+          font: 16px system-ui;
+          text-align: center;
+        "
+      >
+        <p>
+          Loading Routale…<br /><small
+            >This may take a moment on a slow connection.</small
+          >
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

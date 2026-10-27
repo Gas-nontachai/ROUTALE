@@ -40,6 +40,7 @@ import {
   type BaseLayer,
   type MapStyle,
 } from '../lib/mapStyles';
+import { LoadingState } from '../components/LoadingState';
 import { Button } from '../components/ui/button';
 maplibregl.setWorkerUrl(workerUrl);
 const terrainMaxZoom = navigator.hardwareConcurrency <= 4 ? 10 : 12;
@@ -86,6 +87,9 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
   const controlsMenu = useRef<HTMLDivElement>(null);
   const canSwitchStyle = cameraOwner(status) === 'user';
   const [ready, setReady] = useState(false);
+  const [tilesLoading, setTilesLoading] = useState(true);
+  const [terrainLoading, setTerrainLoading] = useState(true);
+  const [mapFailed, setMapFailed] = useState(false);
   const [message, setMessage] = useState(
     'Loading OpenFreeMap and Mapterhorn terrain…',
   );
@@ -129,12 +133,15 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         attributionControl: false,
       });
     } catch {
+      setMapFailed(true);
       setMessage(
         'This device cannot render the map. You can still play the journey or view its summary.',
       );
       return;
     }
     mapRef.current = map;
+    map.on('dataloading', () => setTilesLoading(true));
+    map.on('idle', () => setTilesLoading(false));
     const summaryBounds = routeBounds(world);
     const container = host.current.closest('.simulation-canvas');
     let summarySize = '',
@@ -302,6 +309,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
     const failTerrain = (reason: string) => {
       clearTimeout(terrainTimeout);
       terrainState = 'error';
+      setTerrainLoading(false);
       terrainEnabled.current = false;
       setTerrain(false);
       configureTerrain(map, false, exaggerationRef.current, terrainMaxZoom);
@@ -314,6 +322,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
       try {
         configureTerrain(map, enabled, factor, terrainMaxZoom);
         terrainState = enabled ? 'loading' : 'off';
+        setTerrainLoading(enabled);
         setMessage(enabled ? 'Loading terrain DEM…' : 'Terrain off · 2D map');
         if (!enabled) map.setPitch(0);
         if (enabled)
@@ -336,12 +345,14 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         clearTimeout(terrainTimeout);
         if (terrainState !== 'ready') {
           terrainState = 'ready';
+          setTerrainLoading(false);
           setMessage(
             `3D terrain verified · DEM rendered · ${exaggerationRef.current.toFixed(1)}× relief`,
           );
         }
       } else if (terrainState === 'ready') {
         terrainState = 'loading';
+        setTerrainLoading(true);
         setMessage('Loading terrain DEM for this view…');
         terrainTimeout = setTimeout(
           () => failTerrain('Terrain DEM did not become available'),
@@ -661,6 +672,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
         fallbackStarted = true;
         clearTimeout(terrainTimeout);
         terrainState = 'off';
+        setTerrainLoading(false);
         map.setPitch(0);
         terrainEnabled.current = false;
         setTerrain(false);
@@ -711,12 +723,31 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           : 'Interactive 3D map with GPX route'
       }
     >
-      {!ready && (
-        <div
-          className="absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 bg-[#fffdf2ed] px-4 py-3 text-xs text-foreground"
-          role="status"
-        >
-          {message}
+      {(mapFailed ||
+        !ready ||
+        tilesLoading ||
+        terrainLoading ||
+        styleLoading) && (
+        <div className="pointer-events-none absolute inset-x-3 top-1/2 z-[3] flex -translate-y-1/2 justify-center">
+          <div className="max-w-sm rounded-lg border border-line bg-surface/95 px-4 py-3 text-center shadow-sm">
+            {mapFailed ? (
+              <p role="status" className="text-sm text-muted">
+                {message}
+              </p>
+            ) : (
+              <LoadingState
+                label={
+                  !ready
+                    ? message
+                    : styleLoading
+                      ? 'Loading map style…'
+                      : terrainLoading
+                        ? 'Loading 3D terrain…'
+                        : 'Loading map tiles…'
+                }
+              />
+            )}
+          </div>
         </div>
       )}
       {styleError && (
@@ -732,9 +763,23 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
           ref={controlsMenu}
           inert={isPlaying}
           aria-hidden={isPlaying}
-          className={`relative flex items-center rounded-full border border-white/30 bg-[#195847] p-1 text-white transition-opacity duration-300 motion-reduce:transition-none ${isPlaying ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
+          data-expanded={layersOpen}
+          className={`group/controls [--map-control-size:32px] [@media(any-pointer:coarse)]:[--map-control-size:44px] relative flex items-center rounded-full border border-white/30 bg-[#195847] p-0.5 text-white transition-opacity duration-300 motion-reduce:transition-none ${isPlaying ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'}`}
         >
-          <div id="map-controls-menu" className="flex min-w-0 items-center">
+          <Button
+            variant="mapControl"
+            size="icon"
+            className="absolute right-0.5 top-0.5 size-(--map-control-size) min-h-(--map-control-size) rounded-full p-0 [&_svg]:size-4.5 [transition:opacity_180ms_ease,transform_250ms_ease] group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:opacity-0 group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:pointer-events-none group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:[transform:rotate(90deg)_scale(0.75)]"
+            aria-label="Show map controls"
+            aria-controls="map-controls-menu"
+            onClick={(event) => event.currentTarget.focus()}
+          >
+            <Settings aria-hidden="true" />
+          </Button>
+          <div
+            id="map-controls-menu"
+            className="invisible flex w-(--map-control-size) min-w-0 translate-x-2 items-center overflow-hidden opacity-0 [&_button]:size-(--map-control-size) [&_button]:min-h-(--map-control-size) [&_button]:p-0 [&_svg]:size-4.5 [transition:width_250ms_ease,opacity_180ms_ease,translate_250ms_ease,visibility_250ms] group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:w-[calc(5*var(--map-control-size))] group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:opacity-100 group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:visible group-[:is(:hover,:focus-within,[data-expanded=true])]/controls:translate-x-0"
+          >
             <div
               className="flex items-center justify-between gap-0"
               role="group"
@@ -823,7 +868,7 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
               id="map-settings"
               aria-label="Map settings"
             >
-              <div className="map-settings-content overflow-y-auto rounded-lg border border-line bg-surface p-3 text-foreground shadow-sm">
+              <div className="max-h-[min(440px,calc(100cqh-80px))] overflow-y-auto rounded-lg border border-line bg-surface p-3 text-foreground shadow-sm">
                 <header className="mb-3 flex items-center justify-between">
                   <strong className="flex items-center gap-2 text-sm">
                     <Settings size={16} aria-hidden="true" /> Map
@@ -921,9 +966,10 @@ export function RouteMap({ engine }: { engine: JourneyEngine }) {
                     : 'Pause to edit the map.'}
                 </p>
                 {styleLoading && (
-                  <small className="block px-2 py-1.5 text-xs text-muted">
-                    Loading style…
-                  </small>
+                  <LoadingState
+                    label="Loading style…"
+                    className="px-2 py-1.5 text-xs"
+                  />
                 )}
                 {styleError && (
                   <small
