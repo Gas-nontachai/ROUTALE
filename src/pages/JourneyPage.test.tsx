@@ -2,6 +2,18 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 
 const preview = vi.hoisted(() => ({ ratio: '16:9' }));
+const playback = vi.hoisted(() => ({
+  restart: vi.fn(),
+  begin: vi.fn(),
+  status: 'Ready',
+  onReplay: undefined as (() => void) | undefined,
+}));
+vi.mock('../components/JourneySummary', () => ({
+  JourneySummary: ({ onReplay }: { onReplay: () => void }) => {
+    playback.onReplay = onReplay;
+    return null;
+  },
+}));
 vi.mock('react', async (original) => ({
   ...(await original<typeof import('react')>()),
   useState: () => [preview.ratio, vi.fn()],
@@ -22,14 +34,28 @@ vi.mock('../stores', () => ({
     },
   }),
   useSimulationStore: () => ({
-    status: 'Ready',
+    status: playback.status,
     elapsed: 0,
     distance: 0,
     completion: 0,
     speed: 1,
+    restart: playback.restart,
+    begin: playback.begin,
   }),
 }));
 import { JourneyPage } from './JourneyPage';
+
+it('returns Replay to the start without automatically playing', () => {
+  playback.restart.mockClear();
+  playback.begin.mockClear();
+  playback.status = 'Completed';
+  renderToStaticMarkup(<JourneyPage onBack={() => {}} />);
+  playback.status = 'Ready';
+  expect(playback.onReplay).toBeTypeOf('function');
+  playback.onReplay!();
+  expect(playback.restart).toHaveBeenCalledOnce();
+  expect(playback.begin).not.toHaveBeenCalled();
+});
 
 it.each(['16:9', '9:16', '4:3', '3:4', '1:1', '21:9'])(
   'renders a selectable %s preview bounded by the available width and height',

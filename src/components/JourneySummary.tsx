@@ -198,7 +198,7 @@ export function JourneySummary({
           {details.length > 0 && <h3 className="ui-eyebrow mb-4">Details</h3>}
           <Metrics items={details} />
           {technical.length > 0 && (
-            <details className="mt-6 border-t border-line pt-3">
+            <details open className="mt-6 border-t border-line pt-3">
               <summary className="min-h-11 text-sm font-medium">
                 More stats
               </summary>

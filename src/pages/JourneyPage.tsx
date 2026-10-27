@@ -11,6 +11,7 @@ import {
   ChartNoAxesCombined,
   ChevronLeft,
   Footprints,
+  Gauge,
   Mountain,
   Pause,
   Play,
@@ -134,7 +135,6 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
   };
   const handleReplay = () => {
     simulation.restart();
-    simulation.begin();
   };
 
   const togglePlayback = () => {
@@ -311,17 +311,17 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             {/* Speed */}
             <Button
               variant="outline"
-              size="icon"
               type="button"
               aria-label={`Playback speed: ${simulation.speed}×`}
               title="Change playback speed"
               onClick={() => {
-                const speeds = [0.5, 1, 2, 4, 8];
+                const speeds = [1, 2, 4, 8];
                 const index = speeds.indexOf(simulation.speed);
                 simulation.setSpeed(speeds[(index + 1) % speeds.length]);
               }}
-              className="size-11 shrink-0"
+              className="h-11 shrink-0 px-3"
             >
+              <Gauge className="size-4" aria-hidden="true" />
               {simulation.speed}x
             </Button>
 
