@@ -4,6 +4,7 @@ import {
   Suspense,
   useEffect,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import {
@@ -19,6 +20,7 @@ import { useJourney } from '../hooks/useJourney';
 import { ActivityTypeBadge } from '../components/ActivityTypeBadge';
 import { Button } from '../components/ui/button';
 import { JourneySummary } from '../components/JourneySummary';
+import { PreviewRatioPicker } from '../components/PreviewRatioPicker';
 import { useGpxStore, useWorldStore, useSimulationStore } from '../stores';
 
 const RouteMap = lazy(() =>
@@ -70,6 +72,7 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
   const headerContainer = useRef<HTMLElement>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const summaryContainer = useRef<HTMLDivElement>(null);
+  const [previewRatio, setPreviewRatio] = useState('16:9');
 
   useEffect(() => {
     if (!engine) return;
@@ -185,11 +188,17 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
         </div>
       </header>
 
-      {/* Fill the remaining viewport height with the map. */}
-      <div className="min-h-[240px] flex-1 lg:min-h-0">
+      <div
+        className="relative flex min-h-[240px] flex-1 items-center justify-center lg:min-h-0"
+        style={{ containerType: 'size' }}
+      >
         <section
           aria-label="3D journey map"
-          className="relative h-full min-h-[240px] min-w-0 overflow-hidden rounded-sm border border-line bg-surface-muted lg:min-h-0"
+          className="relative min-w-0 overflow-hidden rounded-sm border border-line bg-surface-muted"
+          style={{
+            aspectRatio: previewRatio.replace(':', ' / '),
+            width: `min(100cqw, calc(100cqh * ${previewRatio.replace(':', ' / ')}))`,
+          }}
         >
           <div
             ref={mapContainer}
@@ -210,21 +219,6 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
               </Suspense>
             </MapBoundary>
           </div>
-          <div
-            ref={summaryContainer}
-            className="invisible absolute inset-0 z-20 overflow-y-auto bg-canvas opacity-0 [transition:opacity_300ms,transform_300ms] motion-reduce:[transition:none]"
-            aria-label="Journey summary"
-            inert
-          >
-            {(simulation.completion > 0 || isCompleted) && (
-              <JourneySummary
-                world={world}
-                activity={activity}
-                onReplay={handleReplay}
-                onImport={handleImport}
-              />
-            )}
-          </div>
           {!isCompleted && (
             <div className="pointer-events-none absolute bottom-5 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-2">
               <div className="distance-overlay px-3 py-2 sm:px-4">
@@ -243,6 +237,21 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             </div>
           )}
         </section>
+        <div
+          ref={summaryContainer}
+          className="invisible absolute inset-0 z-20 overflow-y-auto bg-canvas opacity-0 [transition:opacity_300ms,transform_300ms] motion-reduce:[transition:none]"
+          aria-label="Journey summary"
+          inert
+        >
+          {(simulation.completion > 0 || isCompleted) && (
+            <JourneySummary
+              world={world}
+              activity={activity}
+              onReplay={handleReplay}
+              onImport={handleImport}
+            />
+          )}
+        </div>
       </div>
 
       {!isCompleted && (
@@ -315,6 +324,11 @@ export function JourneyPage({ onBack }: JourneyPageProps) {
             >
               {simulation.speed}x
             </Button>
+
+            <PreviewRatioPicker
+              value={previewRatio}
+              onChange={setPreviewRatio}
+            />
 
             {/* Summary */}
             <Button
